@@ -46,7 +46,7 @@ export class UserService {
     }
 
     if (updateUserDto.type !== undefined) {
-      updateData.type = updateUserDto.type as UserType;
+      updateData.type = updateUserDto.type;
     }
 
     const updatedUser = await userRepository.updateUser(userId, updateData);
