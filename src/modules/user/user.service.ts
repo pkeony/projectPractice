@@ -4,7 +4,6 @@ import { UpdatePasswordDto } from './dto/update-password.dto';
 import { hashPassword, comparePassword } from '../../common/lib/password';
 import { AppError } from '../../common/types/errors';
 import { UserType } from '@prisma/client';
-import { string } from 'superstruct';
 
 const userRepository = new UserRepository();
 
