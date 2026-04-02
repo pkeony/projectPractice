@@ -1,0 +1,312 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  BUYER
+  SELLER
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  type          UserType
+  image         String?  @default("https://sprint-be-project.s3.ap-northeast-2.amazonaws.com/codiit/1749477485230-user_default.png")
+  points        Int      @default(1000)
+  lifetimeSpend Int      @default(0)
+  gradeId       String   @default("grade_green")
+  grade         Grade    @relation(fields: [gradeId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store          Store?
+  storeLikes     StoreLike[]
+  reviews        Review[]
+  carts          Cart[]
+  orders         Order[]
+  inquiries      Inquiry[]
+  inquiryReplies InquiryReply[]
+  notifications  Notification[]
+
+  @@index([email])
+  @@index([gradeId])
+}
+
+model Grade {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  rate      Int
+  minAmout  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+}
+
+model Store {
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  address       String
+  detailAddress String
+  phoneNumber   String
+  content       String
+  image         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  likes         StoreLike[]
+  products      Product[]
+
+  @@index([userId])
+}
+
+model StoreLike {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storeId])
+  @@index([userId])
+  @@index([storeId])
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id                String    @id @default(cuid())
+  storeId           String
+  store             Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId        String
+  category          Category  @relation(fields: [categoryId], references: [id])
+  name              String
+  price             Int
+  discauntRate      Int       @default(0)
+  discountStartTime DateTime?
+  discountEndTime   DateTime?
+  image             String?
+  content           String    @default("")
+  isSoldOut         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  stocks     ProductStock[]
+  reviews    Review[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  inquiries  Inquiry[]
+
+  @@index([storeId])
+  @@index([categoryId])
+}
+
+model Size {
+  id     Int    @id @default(autoincrement())
+  name   String @unique
+  nameEn String
+  nameKo String
+
+  productStocks ProductStock[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+}
+
+model ProductStock {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sizeId    Int
+  size      Size     @relation(fields: [sizeId], references: [id])
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, sizeId])
+  @@index([productId])
+  @@index([sizeId])
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItemId String    @unique
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  rating      Int
+  content     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([productId])
+  @@index([orderItemId])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  buyerId   String     @unique
+  buyer     User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
+
+  @@index([buyerId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sizeId    Int
+  size      Size     @relation(fields: [sizeId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId, sizeId])
+  @@index([cartId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  WaitingPayment
+  CompletedPayment
+  Canceled
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  buyerId     String
+  buyer       User        @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  name        String
+  phoneNumber String
+  address     String
+  subtotal    Int
+  usePoint    Int
+  status      OrderStatus @default(WaitingPayment)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  items   OrderItem[]
+  payment Payment?
+
+  @@index([buyerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  sizeId    Int
+  size      Size     @relation(fields: [sizeId], references: [id])
+  quantity  Int
+  price     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review?
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum PaymentStatus {
+  Paid
+  Pending
+  Failed
+  Canceled
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  orderId   String        @unique
+  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  price     Int
+  status    PaymentStatus @default(Paid)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([orderId])
+}
+
+model Inquiry {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  isSecret  Boolean       @default(false)
+  status    InquiryStatus @default(WaitingAnswer)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  reply InquiryReply?
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
+}
+
+enum InquiryStatus {
+  WaitingAnswer
+  CompletedAnswer
+}
+
+model InquiryReply {
+  id        String   @id @default(cuid())
+  inquiryId String   @unique
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([inquiryId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  type      NotificationType
+  isChecked Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+enum NotificationType {
+  PRODUCT_SOLDOUT
+  INQUIRY_REPLIED
+  NEW_INQUIRY
+}
