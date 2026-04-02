@@ -62,4 +62,27 @@ export class UserService {
       grade: updatedUser.grade,
     };
   }
+
+  async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw new AppError(404, '사용자를 찾을 수 없습니다.', 'Not Found');
+    }
+
+    const isCurrentPasswordValid = await comparePassword(
+      updatePasswordDto.currentPassword,
+      user.password
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new AppError(401, '현재 비밀번호가 틀렸습니다', 'Unauthorized');
+    }
+
+    const hashedNewPassword = await hashPassword(updatePasswordDto.newPassword);
+
+    await userRepository.updatePassword(userId, hashedNewPassword);
+
+    return { message: '비밀번호가 변경되었습니다.' };
+  }
 }
