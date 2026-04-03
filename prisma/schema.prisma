@@ -100,7 +100,7 @@ model Product {
   category          Category  @relation(fields: [categoryId], references: [id])
   name              String
   price             Int
-  discauntRate      Int       @default(0)
+  discountRate      Int       @default(0)
   discountStartTime DateTime?
   discountEndTime   DateTime?
   image             String?
