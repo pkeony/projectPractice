@@ -1,0 +1,148 @@
+### ============================================
+### 🔑 1. BUYER 로그인 (buyer1)
+### ============================================
+@baseUrl = http://localhost:3001
+# @name loginBuyer1
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer1@test.com",
+  "password": "password123"
+}
+
+### ============================================
+### 🔑 2. BUYER 로그인 (buyer2)
+### ============================================
+# @name loginBuyer2
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer2@test.com",
+  "password": "password123"
+}
+
+### ============================================
+### 🔑 3. SELLER 로그인 (seller1)
+### ============================================
+# @name loginSeller1
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "seller1@test.com",
+  "password": "password123"
+}
+
+### ============================================
+### 토큰 변수 설정
+### loginBuyer1 먼저 실행 후 사용!
+### ============================================
+@buyer1Token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290MnUwMDA5YjBldjY2eTNzZjFtIiwiZW1haWwiOiJidXllcjFAdGVzdC5jb20iLCJ0eXBlIjoiQlVZRVIiLCJpYXQiOjE3NzUyODE1NTgsImV4cCI6MTc3NTI4NTE1OH0.2KbUqcdOtU_P_AK_uuj8JOrwIeYrVRrHo5aLdGJqfOE
+@buyer2Token = {{loginBuyer2.response.body.accessToken}}
+@seller1Token = {{loginSeller1.response.body.accessToken}}
+
+### ============================================
+### 📦 4. 상품 목록 조회 (productId 확인용)
+### ============================================
+# @name getProducts
+GET {{baseUrl}}/product?page=1&limit=10
+
+### ============================================
+### 📋 5. buyer1 주문 목록 조회 (orderItemId 확인용)
+### ============================================
+# @name getBuyer1Orders
+GET {{baseUrl}}/order/me
+Authorization: Bearer {{buyer1Token}}
+
+### ============================================
+### ⭐ 6. 상품별 리뷰 목록 조회 (시드에서 생성된 리뷰 확인)
+### 에어맥스90의 productId를 넣어!
+### ============================================
+# @name getReviews
+GET {{baseUrl}}/review/product/여기에_productId_넣기?page=1&limit=10
+
+### ============================================
+### ⭐ 7. 리뷰 작성
+### ⚠️ buyer3은 주문(WaitingPayment)이 있으니까
+###    CompletedPayment 주문을 새로 만들거나
+###    시드에서 리뷰 안 쓴 orderItem을 찾아서 넣어!
+### ============================================
+### 이미 시드에서 buyer1, buyer2의 리뷰가 생성됨
+### 새 리뷰를 테스트하려면 새 주문(CompletedPayment)이 필요!
+### 아래는 형식 예시:
+# @name createReview
+POST {{baseUrl}}/review
+Content-Type: application/json
+Authorization: Bearer {{buyer1Token}}
+
+{
+  "orderItemId": "여기에_orderItemId_넣기",
+  "productId": "여기에_productId_넣기",
+  "rating": 5,
+  "content": "REST Client로 작성한 리뷰입니다! 최고!"
+}
+
+### ============================================
+### ⭐ 8. 리뷰 수정
+### ============================================
+# @name updateReview
+PATCH {{baseUrl}}/review/여기에_reviewId_넣기
+Content-Type: application/json
+Authorization: Bearer {{buyer1Token}}
+
+{
+  "rating": 4,
+  "content": "수정된 리뷰입니다. 별점 하나 깎음!"
+}
+
+### ============================================
+### ⭐ 9. 리뷰 삭제
+### ============================================
+# @name deleteReview
+DELETE {{baseUrl}}/review/여기에_reviewId_넣기
+Authorization: Bearer {{buyer1Token}}
+
+### ============================================
+### ❌ 10. 에러 테스트: 남의 리뷰 수정 시도
+### buyer2의 리뷰를 buyer1 토큰으로 수정 → 403
+### ============================================
+# @name updateOtherReview
+PATCH {{baseUrl}}/review/여기에_buyer2의_reviewId_넣기
+Content-Type: application/json
+Authorization: Bearer {{buyer1Token}}
+
+{
+  "rating": 1,
+  "content": "남의 리뷰 수정 시도!"
+}
+
+### ============================================
+### ❌ 11. 에러 테스트: 토큰 없이 리뷰 작성 → 401
+### ============================================
+# @name createReviewNoAuth
+POST {{baseUrl}}/review
+Content-Type: application/json
+
+{
+  "orderItemId": "test",
+  "productId": "test",
+  "rating": 5,
+  "content": "토큰 없이 리뷰 작성!"
+}
+
+### ============================================
+### ❌ 12. 에러 테스트: 별점 범위 초과 → 400
+### ============================================
+# @name createReviewBadRating
+POST {{baseUrl}}/review
+Content-Type: application/json
+Authorization: Bearer {{buyer1Token}}
+
+{
+  "orderItemId": "test",
+  "productId": "test",
+  "rating": 10,
+  "content": "별점 10점 시도!"
+}
