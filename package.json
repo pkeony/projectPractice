@@ -11,7 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "ts-node prisma/seed.ts",
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
     "seed:reset": "npx prisma migrate reset --force && ts-node prisma/seed.ts"
   },
   "keywords": [],
@@ -44,6 +44,6 @@
     "typescript": "^5.9.3"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
   }
 }

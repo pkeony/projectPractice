@@ -6,6 +6,8 @@ import userRouter from './modules/user/user.module';
 import storeRouter from './modules/store/store.module';
 import productRouter from './modules/product/product.module';
 import reviewRouter from './modules/review/review.module';
+import cartRouter from './modules/cart/cart.module';
+import orderRouter from './modules/order/order.module';
 import { errorHandler } from './common/middlewares/errorHandler';
 
 const app = express();
@@ -27,6 +29,8 @@ app.use('/user', userRouter);
 app.use('/store', storeRouter);
 app.use('/product', productRouter);
 app.use('/review', reviewRouter);
+app.use('/cart', cartRouter);
+app.use('/order', orderRouter);
 
 app.use(errorHandler);
 
