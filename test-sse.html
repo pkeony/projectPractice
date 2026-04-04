@@ -1,0 +1,175 @@
+cat > test-sse.html << 'EOF'
+<!doctype html>
+<html>
+  <head>
+    <title>SSE 알림 테스트</title>
+    <style>
+      body {
+        font-family: monospace;
+        padding: 20px;
+        background: #1e1e1e;
+        color: #fff;
+      }
+      .log {
+        background: #2d2d2d;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+      }
+      .connected {
+        border-left: 3px solid #4caf50;
+      }
+      .notification {
+        border-left: 3px solid #ff9800;
+      }
+      .error {
+        border-left: 3px solid #f44336;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        background: #333;
+        color: #fff;
+        border: 1px solid #555;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+      }
+      #connectBtn {
+        background: #4caf50;
+      }
+      #disconnectBtn {
+        background: #f44336;
+      }
+      #loginBtn {
+        background: #2196f3;
+      }
+      button:hover {
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔔 SSE 알림 테스트</h1>
+
+    <h3>1단계: 로그인</h3>
+    <input
+      id="email"
+      placeholder="이메일 (예: seller1@test.com)"
+      value="seller1@test.com"
+    />
+    <input id="password" placeholder="비밀번호" value="password123" />
+    <button id="loginBtn" onclick="login()">🔑 로그인</button>
+    <p id="tokenDisplay" style="color: #4caf50"></p>
+
+    <h3>2단계: SSE 연결</h3>
+    <button id="connectBtn" onclick="connect()">📡 연결</button>
+    <button id="disconnectBtn" onclick="disconnect()">❌ 해제</button>
+
+    <hr />
+    <div id="logs"></div>
+
+    <script>
+      let eventSource = null;
+      let accessToken = null;
+      const BASE_URL = 'http://localhost:3001';
+
+      function addLog(message, type = '') {
+        const logs = document.getElementById('logs');
+        const div = document.createElement('div');
+        div.className = 'log ' + type;
+        div.textContent =
+          '[' + new Date().toLocaleTimeString() + '] ' + message;
+        logs.prepend(div);
+      }
+
+      async function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+          const res = await fetch(BASE_URL + '/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await res.json();
+
+          if (data.accessToken) {
+            accessToken = data.accessToken;
+            document.getElementById('tokenDisplay').textContent =
+              '✅ 로그인 성공! 토큰: ' + accessToken.substring(0, 30) + '...';
+            addLog('🔑 로그인 성공: ' + email, 'connected');
+          } else {
+            addLog('❌ 로그인 실패: ' + JSON.stringify(data), 'error');
+          }
+        } catch (e) {
+          addLog('❌ 로그인 에러: ' + e.message, 'error');
+        }
+      }
+
+      function connect() {
+        if (!accessToken) {
+          addLog('❌ 먼저 로그인하세요!', 'error');
+          return;
+        }
+
+        if (eventSource) {
+          eventSource.close();
+        }
+
+        const url = BASE_URL + '/notification/stream?token=' + accessToken;
+        addLog('📡 연결 시도: ' + url.substring(0, 60) + '...');
+
+        eventSource = new EventSource(url);
+
+        eventSource.onopen = function () {
+          addLog('✅ SSE 연결 열림!', 'connected');
+        };
+
+        eventSource.onmessage = function (event) {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'connected') {
+              addLog('🟢 ' + data.message, 'connected');
+            } else if (data.type === 'notification') {
+              addLog(
+                '🔔 알림: ' + data.data.content + ' (' + data.data.type + ')',
+                'notification'
+              );
+            } else {
+              addLog('📨 메시지: ' + JSON.stringify(data), 'notification');
+            }
+          } catch (e) {
+            addLog('📨 Raw: ' + event.data);
+          }
+        };
+
+        eventSource.onerror = function (e) {
+          if (eventSource.readyState === EventSource.CLOSED) {
+            addLog('🔴 SSE 연결 종료됨', 'error');
+          } else {
+            addLog('⚠️ SSE 에러, 재연결 시도 중...', 'error');
+          }
+        };
+      }
+
+      function disconnect() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+          addLog('🔴 SSE 연결 해제', 'error');
+        }
+      }
+    </script>
+  </body>
+</html>
+EOF

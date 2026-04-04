@@ -9,6 +9,7 @@ import reviewRouter from './modules/review/review.module';
 import cartRouter from './modules/cart/cart.module';
 import orderRouter from './modules/order/order.module';
 import inquiryRouter from './modules/inquiry/inquiry.module';
+import notificationRouter from './modules/notification/notification.module';
 import { errorHandler } from './common/middlewares/errorHandler';
 
 const app = express();
@@ -16,7 +17,8 @@ const PORT = process.env.PORT || 8000;
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: true,
+    // origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     credentials: true,
   })
 );
@@ -33,6 +35,7 @@ app.use('/review', reviewRouter);
 app.use('/cart', cartRouter);
 app.use('/order', orderRouter);
 app.use('/inquiry', inquiryRouter);
+app.use('/notification', notificationRouter);
 
 app.use(errorHandler);
 
