@@ -6,6 +6,7 @@ import { InquiryWithDetail, InquirySummary } from './types/inquiry.types';
 import { PaginatedResult } from '../../common/types/pagination';
 import { AppError } from '../../common/types/errors';
 import prisma from '../../common/database/prisma';
+import { notificationService } from '../notification/notification.service';
 
 const inquiryRepository = new InquiryRepository();
 
@@ -84,6 +85,7 @@ export class InquiryService {
   ): Promise<InquiryWithDetail> {
     const product = await prisma.product.findUnique({
       where: { id: createInquiryDto.productId },
+      include: { store: { select: { userId: true } } },
     });
 
     if (!product) {
@@ -97,6 +99,12 @@ export class InquiryService {
       content: createInquiryDto.content,
       isSecret: createInquiryDto.isSecret ?? false,
     });
+
+    await notificationService.sendNotification(
+      product.store.userId,
+      `새로운 문의가 등록되었습니다: "${createInquiryDto.title}"`,
+      'NEW_INQUIRY'
+    );
 
     return inquiry;
   }
@@ -181,6 +189,12 @@ export class InquiryService {
     });
 
     await inquiryRepository.updateStatus(inquiryId, 'CompletedAnswer');
+
+    await notificationService.sendNotification(
+      inquiry.userId,
+      `문의에 답변이 등록되었습니다: "${inquiry.title}"`,
+      'INQUIRY_REPLIED'
+    );
 
     const updatedInquiry = await inquiryRepository.findById(inquiryId);
 

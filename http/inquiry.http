@@ -1,4 +1,4 @@
-cat > http/inquiry.http << 'EOF'
+
 @baseUrl = http://localhost:3001
 
 ### 🔑 BUYER 로그인
@@ -22,7 +22,7 @@ Content-Type: application/json
 }
 
 ###
-@buyerToken = {{loginBuyer1.response.body.accessToken}}
+@buyerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290MnUwMDA5YjBldjY2eTNzZjFtIiwiZW1haWwiOiJidXllcjFAdGVzdC5jb20iLCJ0eXBlIjoiQlVZRVIiLCJpYXQiOjE3NzUyODY5OTAsImV4cCI6MTc3NTI5MDU5MH0.QxqhogjD5-YoVq6KhMQHNzWQ74XhN0PRlgGSbnmcaCo
 @sellerToken = {{loginSeller1.response.body.accessToken}}
 
 ### ============================================
@@ -138,4 +138,3 @@ Authorization: Bearer {{buyerToken}}
 # @name deleteInquiry
 DELETE {{baseUrl}}/inquiry/여기에_inquiryId
 Authorization: Bearer {{buyerToken}}
-EOF
