@@ -10,6 +10,7 @@ import cartRouter from './modules/cart/cart.module';
 import orderRouter from './modules/order/order.module';
 import inquiryRouter from './modules/inquiry/inquiry.module';
 import notificationRouter from './modules/notification/notification.module';
+import dashboardRouter from './modules/dashboard/dashboard.module';
 import { errorHandler } from './common/middlewares/errorHandler';
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/cart', cartRouter);
 app.use('/order', orderRouter);
 app.use('/inquiry', inquiryRouter);
 app.use('/notification', notificationRouter);
+app.use('/dashboard', dashboardRouter);
 
 app.use(errorHandler);
 

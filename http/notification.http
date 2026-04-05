@@ -22,7 +22,7 @@ Content-Type: application/json
 }
 
 ###
-@buyerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290MnUwMDA5YjBldjY2eTNzZjFtIiwiZW1haWwiOiJidXllcjFAdGVzdC5jb20iLCJ0eXBlIjoiQlVZRVIiLCJpYXQiOjE3NzUyOTMzNzIsImV4cCI6MTc3NTI5Njk3Mn0.jljO7cOKgRW6_47lMq9r-EjDxt5qyQ2NSPGDDcqd4Nc
+@buyerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290MnUwMDA5YjBldjY2eTNzZjFtIiwiZW1haWwiOiJidXllcjFAdGVzdC5jb20iLCJ0eXBlIjoiQlVZRVIiLCJpYXQiOjE3NzUyOTM4MjcsImV4cCI6MTc3NTI5NzQyN30.fdbBViOjPN7w-lv9k9UawRJPq_xciqWRKG2xqWj9uMo
 @sellerToken = {{loginSeller1.response.body.accessToken}}
 
 ### ============================================
