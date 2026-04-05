@@ -18,22 +18,7 @@ export class DashboardController {
       );
     }
 
-    const startDate = req.query.startDate as string;
-    const endDate = req.query.endDate as string;
-
-    if (!startDate || !endDate) {
-      throw new AppError(
-        400,
-        'startDate, endDate는 필수입니다. (YYYY-MM-DD)',
-        'Bad Request'
-      );
-    }
-
-    const result = await dashboardService.getDashboard(
-      userId,
-      startDate,
-      endDate
-    );
+    const result = await dashboardService.getDashboard(userId);
 
     res.status(200).json(result);
   }

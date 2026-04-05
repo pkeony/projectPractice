@@ -1,8 +1,7 @@
 import { ReviewRepository } from './review.repository';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
-import { ReviewWithUser } from './types/review.types';
-import { PaginatedResult } from '../../common/types/pagination';
+import { ReviewWithUser, ReviewWithDetail } from './types/review.types';
 import { AppError } from '../../common/types/errors';
 import prisma from '../../common/database/prisma';
 
@@ -13,7 +12,7 @@ export class ReviewService {
     productId: string,
     page: number,
     limit: number
-  ): Promise<PaginatedResult<ReviewWithUser>> {
+  ) {
     const product = await prisma.product.findUnique({
       where: { id: productId },
     });
@@ -29,12 +28,24 @@ export class ReviewService {
     );
 
     return {
-      data: reviews,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      items: reviews,
+      meta: {
+        total,
+        page,
+        limit,
+        hasNextPage: page * limit < total,
+      },
     };
+  }
+
+  async getReviewById(reviewId: string): Promise<ReviewWithDetail> {
+    const review = await reviewRepository.findById(reviewId);
+
+    if (!review) {
+      throw new AppError(404, '리뷰를 찾을 수 없습니다.', 'Not Found');
+    }
+
+    return review;
   }
 
   async createReview(

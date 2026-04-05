@@ -1,13 +1,56 @@
 import { UserRepository } from './user.repository';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UpdatePasswordDto } from './dto/update-password.dto';
-import { hashPassword, comparePassword } from '../../common/lib/password';
 import { AppError } from '../../common/types/errors';
 import { UserType } from '@prisma/client';
+import { hashPassword, comparePassword } from '../../common/lib/password';
+import { generateTokens } from '../../common/lib/jwt';
+import { AuthRepository } from '../auth/auth.repository';
+import { ErrorMessages } from '../../common/types/errors';
 
 const userRepository = new UserRepository();
+const authRepository = new AuthRepository();
 
 export class UserService {
+  async signup(signUpDto: {
+    email: string;
+    password: string;
+    name: string;
+    type: string;
+  }) {
+    const existingUser = await authRepository.findByEmail(signUpDto.email);
+    if (existingUser) {
+      throw new AppError(409, ErrorMessages.USER_ALREADY_EXISTS, 'Conflict');
+    }
+
+    const hashedPassword = await hashPassword(signUpDto.password);
+
+    const user = await authRepository.createUser({
+      email: signUpDto.email,
+      password: hashedPassword,
+      name: signUpDto.name,
+      type: signUpDto.type as UserType,
+    });
+
+    const { accessToken, refreshToken } = generateTokens({
+      userId: user.id,
+      email: user.email,
+      type: user.type,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        type: user.type,
+        image: user.image,
+        points: user.points,
+        gradeId: user.gradeId,
+      },
+    };
+  }
+
   async getMe(userId: string) {
     const user = await userRepository.findById(userId);
 
@@ -27,28 +70,57 @@ export class UserService {
     };
   }
 
-  async updateMe(userId: string, updateUserDto: UpdateUserDto) {
+  async updateMe(
+    userId: string,
+    updateData: {
+      name?: string;
+      image?: string;
+      currentPassword?: string;
+      password?: string;
+    }
+  ) {
     const user = await userRepository.findById(userId);
 
     if (!user) {
       throw new AppError(404, '사용자를 찾을 수 없습니다', 'Not found');
     }
 
-    const updateData: { name?: string; image?: string; type?: UserType } = {};
+    if (updateData.password) {
+      if (!updateData.currentPassword) {
+        throw new AppError(
+          400,
+          '현재 비밀번호를 입력해주세요.',
+          'Bad Request'
+        );
+      }
 
-    if (updateUserDto.name !== undefined) {
-      updateData.name = updateUserDto.name;
+      const isCurrentPasswordValid = await comparePassword(
+        updateData.currentPassword,
+        user.password
+      );
+
+      if (!isCurrentPasswordValid) {
+        throw new AppError(401, '현재 비밀번호가 틀렸습니다', 'Unauthorized');
+      }
+
+      updateData.image = updateData.image;
     }
 
-    if (updateUserDto.image !== undefined) {
-      updateData.image = updateUserDto.image;
+    const data: { name?: string; image?: string; password?: string } = {};
+
+    if (updateData.name !== undefined) {
+      data.name = updateData.name;
     }
 
-    if (updateUserDto.type !== undefined) {
-      updateData.type = updateUserDto.type;
+    if (updateData.image !== undefined) {
+      data.image = updateData.image;
     }
 
-    const updatedUser = await userRepository.updateUser(userId, updateData);
+    if (updateData.password !== undefined) {
+      data.password = await hashPassword(updateData.password);
+    }
+
+    const updatedUser = await userRepository.updateUser(userId, data);
 
     return {
       id: updatedUser.id,
@@ -62,26 +134,18 @@ export class UserService {
     };
   }
 
-  async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
+  async getMyLikes(userId: string) {
+    const likes = await userRepository.findStoreLikes(userId);
+    return likes;
+  }
+
+  async deleteAccount(userId: string) {
     const user = await userRepository.findById(userId);
 
     if (!user) {
       throw new AppError(404, '사용자를 찾을 수 없습니다.', 'Not Found');
     }
 
-    const isCurrentPasswordValid = await comparePassword(
-      updatePasswordDto.currentPassword,
-      user.password
-    );
-
-    if (!isCurrentPasswordValid) {
-      throw new AppError(401, '현재 비밀번호가 틀렸습니다', 'Unauthorized');
-    }
-
-    const hashedNewPassword = await hashPassword(updatePasswordDto.newPassword);
-
-    await userRepository.updatePassword(userId, hashedNewPassword);
-
-    return { message: '비밀번호가 변경되었습니다.' };
+    await userRepository.deleteUser(userId);
   }
 }

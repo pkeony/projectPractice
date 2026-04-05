@@ -11,6 +11,96 @@ export class StoreRepository {
     });
   }
 
+  async findByUserIdWithStats(userId: string) {
+    const store = await prisma.store.findUnique({
+      where: { userId },
+      include: {
+        likes: true,
+        products: {
+          include: {
+            stocks: true,
+            orderItems: true,
+          },
+        },
+      },
+    });
+
+    if (!store) return null;
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const monthFavoriteCount = await prisma.storeLike.count({
+      where: {
+        storeId: store.id,
+        createdAt: { gte: startOfMonth },
+      },
+    });
+
+    const productCount = store.products.length;
+    const favoriteCount = store.likes.length;
+    const totalSoldCount = store.products.reduce(
+      (sum, p) => sum + p.orderItems.reduce((s, oi) => s + oi.quantity, 0),
+      0
+    );
+
+    return {
+      id: store.id,
+      userId: store.userId,
+      name: store.name,
+      address: store.address,
+      detailAddress: store.detailAddress,
+      phoneNumber: store.phoneNumber,
+      content: store.content,
+      image: store.image,
+      createdAt: store.createdAt,
+      updatedAt: store.updatedAt,
+      productCount,
+      favoriteCount,
+      monthFavoriteCount,
+      totalSoldCount,
+    };
+  }
+
+  async findProductsByStoreId(storeId: string, page: number, pageSize: number) {
+    const skip = (page - 1) * pageSize;
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where: { storeId },
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          stocks: true,
+        },
+      }),
+      prisma.product.count({ where: { storeId } }),
+    ]);
+
+    const list = products.map((p) => {
+      const totalStock = p.stocks.reduce((sum, s) => sum + s.quantity, 0);
+      const now = new Date();
+      const isDiscount =
+        p.discountRate > 0 &&
+        (!p.discountStartTime || p.discountStartTime <= now) &&
+        (!p.discountEndTime || p.discountEndTime >= now);
+
+      return {
+        id: p.id,
+        image: p.image,
+        name: p.name,
+        price: p.price,
+        createdAt: p.createdAt,
+        stock: totalStock,
+        isDiscount,
+        isSoldOut: p.isSoldOut,
+      };
+    });
+
+    return { products: list, total };
+  }
+
   async findById(storeId: string) {
     return prisma.store.findUnique({
       where: { id: storeId },

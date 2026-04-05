@@ -5,20 +5,21 @@ import {
   authMiddleware,
   optionalAuthMiddleware,
 } from '../../common/middlewares/auth';
+import { upload } from '../../common/lib/multer';
 
 const storeRouter = Router();
 const storeController = new StoreController();
 
 storeRouter.get(
-  '/me',
+  '/detail/my',
   authMiddleware,
-  asyncHandler(storeController.getMyStore)
+  asyncHandler(storeController.getMyStoreDetail)
 );
 
 storeRouter.get(
-  '/',
-  optionalAuthMiddleware,
-  asyncHandler(storeController.getStores)
+  '/detail/my/product',
+  authMiddleware,
+  asyncHandler(storeController.getMyStoreProducts)
 );
 
 storeRouter.get(
@@ -30,19 +31,27 @@ storeRouter.get(
 storeRouter.post(
   '/',
   authMiddleware,
+  upload.single('image'),
   asyncHandler(storeController.createStore)
 );
 
 storeRouter.patch(
-  '/me',
+  '/:storeId',
   authMiddleware,
+  upload.single('image'),
   asyncHandler(storeController.updateStore)
 );
 
 storeRouter.post(
-  '/:storeId/like',
+  '/:storeId/favorite',
   authMiddleware,
-  asyncHandler(storeController.toggleLike)
+  asyncHandler(storeController.addFavorite)
+);
+
+storeRouter.delete(
+  '/:storeId/favorite',
+  authMiddleware,
+  asyncHandler(storeController.removeFavorite)
 );
 
 export default storeRouter;

@@ -9,21 +9,27 @@ const cartController = new CartController();
 cartRouter.get('/', authMiddleware, asyncHandler(cartController.getMyCart));
 
 cartRouter.post(
-  '/items',
+  '/',
   authMiddleware,
-  asyncHandler(cartController.addCartItem)
+  asyncHandler(cartController.updateCart)
 );
 
 cartRouter.patch(
-  '/items/:cartItemId',
+  '/',
   authMiddleware,
-  asyncHandler(cartController.updateCartItem)
+  asyncHandler(cartController.updateCart)
 );
 
 cartRouter.delete(
-  '/items/:cartItemId',
+  '/:cartItemId',
   authMiddleware,
   asyncHandler(cartController.deleteCartItem)
+);
+
+cartRouter.get(
+  '/:cartItemId',
+  authMiddleware,
+  asyncHandler(cartController.getCartItem)
 );
 
 export default cartRouter;

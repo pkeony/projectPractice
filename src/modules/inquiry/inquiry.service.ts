@@ -11,6 +11,23 @@ import { notificationService } from '../notification/notification.service';
 const inquiryRepository = new InquiryRepository();
 
 export class InquiryService {
+  async getMyInquiries(
+    userId: string,
+    page: number,
+    pageSize: number
+  ): Promise<any> {
+    const { inquiries, total } = await inquiryRepository.findByUserId(
+      userId,
+      page,
+      pageSize
+    );
+
+    return {
+      list: inquiries,
+      totalCount: total,
+    };
+  }
+
   async getInquiriesByProduct(
     productId: string,
     page: number,

@@ -1,11 +1,26 @@
 import { ProductRepository } from './product.repository';
 import { StoreRepository } from '../store/store.repository';
+import { InquiryRepository } from '../inquiry/inquiry.repository';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { AppError } from '../../common/types/errors';
 
 const productRepository = new ProductRepository();
 const storeRepository = new StoreRepository();
+const inquiryRepository = new InquiryRepository();
+
+function calcDiscountPrice(price: number, discountRate: number, discountStartTime: Date | null, discountEndTime: Date | null): number {
+  const now = new Date();
+  const isActive =
+    discountRate > 0 &&
+    (!discountStartTime || discountStartTime <= now) &&
+    (!discountEndTime || discountEndTime >= now);
+
+  if (isActive) {
+    return Math.floor(price * (1 - discountRate / 100));
+  }
+  return price;
+}
 
 export class ProductService {
   async getProductById(productId: string) {
@@ -18,33 +33,91 @@ export class ProductService {
     const avgRating =
       product.reviews.length > 0
         ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
-          //reduce() 배열을 하나의 값으로 줄이기
-          //sum + reviews.rationg -> 모든 rating값을 더한다 sum이 그런뜻
           product.reviews.length
         : 0;
 
+    const ratingCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const review of product.reviews) {
+      if (ratingCounts[review.rating] !== undefined) {
+        ratingCounts[review.rating]++;
+      }
+    }
+
     return {
       ...product,
-      avgRating: Math.round(avgRating * 10) / 10, //4.3333 같은값을 round로 43으로 만든뒤 4.3으로 바꾸기
+      stocks: product.stocks.map((s) => ({
+        id: s.id,
+        productId: s.productId,
+        quantity: s.quantity,
+        size: {
+          id: s.size.id,
+          name: s.size.name,
+          size: { en: s.size.nameEn, ko: s.size.nameKo },
+        },
+      })),
+      avgRating: Math.round(avgRating * 10) / 10,
+      reviewsCount: product.reviews.length,
+      reviewsRating: Math.round(avgRating * 10) / 10,
+      ratingCounts,
     };
   }
 
   async getProducts(params: {
     page: number;
-    limit: number;
-    categoryId?: string;
-    storeId?: string;
-    keyword?: string;
-    sortBy?: string;
+    pageSize: number;
+    sort?: string;
+    search?: string;
+    priceMin?: number;
+    priceMax?: number;
+    size?: string;
+    favoriteStore?: string;
+    categoryName?: string;
   }) {
     const { products, total } = await productRepository.findAll(params);
 
+    const now = new Date();
+    const list = products.map((p) => {
+      const discountPrice = calcDiscountPrice(
+        p.price,
+        p.discountRate,
+        p.discountStartTime,
+        p.discountEndTime
+      );
+      const reviewsCount = (p as any)._count?.reviews ?? 0;
+      const reviewsList: any[] = (p as any).reviews ?? [];
+      const reviewsRating =
+        reviewsList.length > 0
+          ? Math.round(
+              (reviewsList.reduce((sum: number, r: any) => sum + r.rating, 0) /
+                reviewsList.length) *
+                10
+            ) / 10
+          : 0;
+
+      return {
+        id: p.id,
+        storeId: p.storeId,
+        storeName: (p as any).store?.name ?? '',
+        name: p.name,
+        image: p.image,
+        price: p.price,
+        discountPrice,
+        discountRate: p.discountRate,
+        discountStartTime: p.discountStartTime,
+        discountEndTime: p.discountEndTime,
+        reviewsCount,
+        reviewsRating,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        sales: (p as any).orderItems
+          ? (p as any).orderItems.reduce((sum: number, oi: any) => sum + oi.quantity, 0)
+          : 0,
+      };
+    });
+
     return {
-      products,
-      total,
-      pages: params.page,
-      limit: params.limit,
-      totalPages: Math.ceil(total / params.limit),
+      list,
+      totalCount: total,
     };
   }
 
@@ -165,5 +238,47 @@ export class ProductService {
     await productRepository.delete(productId);
 
     return { message: '상품이 삭제되었습니다.' };
+  }
+
+  async getProductInquiries(
+    productId: string,
+    page: number,
+    pageSize: number,
+    sort: string,
+    status: string | undefined,
+    userId: string | undefined
+  ) {
+    const product = await productRepository.findById(productId);
+    if (!product) {
+      throw new AppError(404, '상품을 찾을 수 없습니다.', 'Not Found');
+    }
+
+    const isStoreOwner = product.store.userId === userId;
+    const orderBy = sort === 'oldest' ? 'asc' : 'desc';
+
+    const { inquiries, total } = await inquiryRepository.findByProductIdFiltered(
+      productId,
+      page,
+      pageSize,
+      orderBy,
+      status
+    );
+
+    const list = inquiries.map((inquiry) => {
+      if (inquiry.isSecret && inquiry.userId !== userId && !isStoreOwner) {
+        return {
+          ...inquiry,
+          title: '비밀글입니다.',
+          content: '비밀글입니다.',
+          user: { id: '', name: '***' },
+        };
+      }
+      return inquiry;
+    });
+
+    return {
+      list,
+      totalCount: total,
+    };
   }
 }

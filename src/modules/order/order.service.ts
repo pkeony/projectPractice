@@ -1,7 +1,6 @@
 import { OrderRepository } from './order.repository';
 import { StoreRepository } from '../store/store.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderWithDetail } from './types/order.types';
 import { PaginatedResult } from '../../common/types/pagination';
 import { AppError } from '../../common/types/errors';
 import prisma from '../../common/database/prisma';
@@ -9,57 +8,64 @@ import prisma from '../../common/database/prisma';
 const orderRepository = new OrderRepository();
 const storeRepository = new StoreRepository();
 
+function transformOrderItems(items: any[]) {
+  return items.map((item: any) => ({
+    id: item.id,
+    price: item.price,
+    quantity: item.quantity,
+    isReviewed: !!item.review,
+    productId: item.productId,
+    product: item.product
+      ? {
+          name: item.product.name,
+          image: item.product.image,
+          reviews: item.product.reviews ?? [],
+        }
+      : undefined,
+    size: item.size
+      ? {
+          size: { en: item.size.nameEn, ko: item.size.nameKo },
+        }
+      : undefined,
+  }));
+}
+
+function transformOrder(order: any) {
+  return {
+    id: order.id,
+    name: order.name,
+    address: order.address,
+    phoneNumber: order.phoneNumber,
+    subtotal: order.subtotal,
+    totalQuantity: order.items
+      ? order.items.reduce((sum: number, item: any) => sum + item.quantity, 0)
+      : 0,
+    usePoint: order.usePoint,
+    createdAt: order.createdAt,
+    orderItems: order.items ? transformOrderItems(order.items) : [],
+    payments: order.payment ?? null,
+  };
+}
+
 export class OrderService {
   async getMyOrders(
     buyerId: string,
     page: number,
     limit: number
-  ): Promise<PaginatedResult<any>> {
+  ): Promise<any> {
     const { orders, total } = await orderRepository.findByBuyerId(
       buyerId,
       page,
       limit
     );
 
-    return {
-      data: orders,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
-  }
-
-  async getStoreOrders(
-    userId: string,
-    page: number,
-    limit: number
-  ): Promise<PaginatedResult<any>> {
-    const store = await storeRepository.findByUserId(userId);
-
-    if (!store) {
-      throw new AppError(404, '등록된 가게가 없습니다.', 'Not Found');
-    }
-
-    const { orders, total } = await orderRepository.findByStoreId(
-      store.id,
-      page,
-      limit
-    );
-
-    return {
-      data: orders,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return orders.map(transformOrder);
   }
 
   async getOrderById(
     userId: string,
     orderId: string
-  ): Promise<OrderWithDetail> {
+  ): Promise<any> {
     const order = await orderRepository.findById(orderId);
 
     if (!order) {
@@ -69,7 +75,7 @@ export class OrderService {
     if (order.buyerId !== userId) {
       const store = await storeRepository.findByUserId(userId);
       const isStoreOwner = order.items.some(
-        (item) => item.product.store.id === store?.id
+        (item) => (item.product as any).store?.id === store?.id
       );
 
       if (!isStoreOwner) {
@@ -77,13 +83,13 @@ export class OrderService {
       }
     }
 
-    return order;
+    return transformOrder(order);
   }
 
   async createOrder(
     buyerId: string,
     createOrderDto: CreateOrderDto
-  ): Promise<OrderWithDetail> {
+  ): Promise<any> {
     const buyer = await prisma.user.findUnique({
       where: { id: buyerId },
     });
@@ -194,10 +200,14 @@ export class OrderService {
       return createdOrder;
     });
 
-    return order;
+    return transformOrder(order);
   }
 
-  async payOrder(userId: string, orderId: string): Promise<OrderWithDetail> {
+  async updateOrder(
+    userId: string,
+    orderId: string,
+    data: { name?: string; address?: string; phoneNumber?: string }
+  ): Promise<any> {
     const order = await orderRepository.findById(orderId);
 
     if (!order) {
@@ -205,36 +215,14 @@ export class OrderService {
     }
 
     if (order.buyerId !== userId) {
-      throw new AppError(403, '본인의 주문만 결제할 수 있습니다.', 'Forbidden');
+      throw new AppError(403, '본인의 주문만 수정할 수 있습니다.', 'Forbidden');
     }
 
-    if (order.status !== 'WaitingPayment') {
-      throw new AppError(
-        400,
-        '결제 대기 중인 주문만 결제할 수 있습니다.',
-        'Bad Request'
-      );
-    }
-
-    const paymentPrice = order.subtotal - order.usePoint;
-
-    await orderRepository.createPayment(orderId, paymentPrice);
-    const updatedOrder = await orderRepository.updateStatus(
-      orderId,
-      'CompletedPayment'
-    );
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        lifetimeSpend: { increment: paymentPrice },
-      },
-    });
-
-    return updatedOrder;
+    const updatedOrder = await orderRepository.updateOrder(orderId, data);
+    return transformOrder(updatedOrder);
   }
 
-  async cancelOrder(userId: string, orderId: string): Promise<OrderWithDetail> {
+  async cancelOrder(userId: string, orderId: string): Promise<any> {
     const order = await orderRepository.findById(orderId);
 
     if (!order) {
@@ -291,6 +279,6 @@ export class OrderService {
       'Canceled'
     );
 
-    return updatedOrder;
+    return transformOrder(updatedOrder);
   }
 }

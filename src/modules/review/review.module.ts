@@ -6,14 +6,21 @@ import { authMiddleware } from '../../common/middlewares/auth';
 const reviewRouter = Router();
 const reviewController = new ReviewController();
 
+// When mounted at /product: GET /product/:productId/reviews, POST /product/:productId/reviews
 reviewRouter.get(
-  '/product/:productId',
+  '/:productId/reviews',
   asyncHandler(reviewController.getReviewsByProduct)
 );
 reviewRouter.post(
-  '/',
+  '/:productId/reviews',
   authMiddleware,
   asyncHandler(reviewController.createReview)
+);
+
+// When mounted at /review: GET /review/:reviewId, PATCH /review/:reviewId, DELETE /review/:reviewId
+reviewRouter.get(
+  '/:reviewId',
+  asyncHandler(reviewController.getReviewById)
 );
 reviewRouter.patch(
   '/:reviewId',

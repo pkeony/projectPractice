@@ -23,14 +23,23 @@ export class ReviewController {
     res.status(200).json(result);
   }
 
+  async getReviewById(req: AuthRequest, res: Response): Promise<void> {
+    const reviewId = req.params.reviewId as string;
+
+    const review = await reviewService.getReviewById(reviewId);
+
+    res.status(200).json(review);
+  }
+
   async createReview(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.userId;
+    const productId = req.params.productId as string;
 
     validateCreateReview(req.body);
 
     const review = await reviewService.createReview(userId, {
       orderItemId: req.body.orderItemId,
-      productId: req.body.productId,
+      productId,
       rating: req.body.rating,
       content: req.body.content,
     });

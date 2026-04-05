@@ -1,46 +1,34 @@
-export interface DateRange {
-  startDate: Date;
-  endDate: Date;
-}
-
-export interface SalesSummary {
+export interface PeriodStats {
   totalOrders: number;
-  totalRevenue: number;
-  totalItemsSold: number;
-  averageOrderValue: number;
+  totalSales: number;
 }
 
-export interface DailySales {
-  date: string;
-  orders: number;
-  revenue: number;
+export interface PeriodData {
+  current: PeriodStats;
+  previous: PeriodStats | null;
+  changeRate: PeriodStats;
 }
 
-export interface TopProduct {
-  rank: number;
-  productId: string;
-  productName: string;
-  productImage: string | null;
-  totalQuantity: number;
-  totalRevenue: number;
+export interface TopSalesProduct {
+  totalOrders: number;
+  product: {
+    id: string;
+    name: string;
+    price: number;
+  };
 }
 
-export interface PriceRangeRevenue {
-  range: string;
-  minPrice: number;
-  maxPrice: number;
-  orderCount: number;
-  revenue: number;
+export interface PriceRangeData {
+  priceRange: string;
+  totalSales: number;
   percentage: number;
 }
 
 export interface DashboardResponse {
-  summary: SalesSummary;
-  dailySales: DailySales[];
-  topProducts: TopProduct[];
-  priceRangeRevenue: PriceRangeRevenue[];
-  dateRange: {
-    startDate: string;
-    endDate: string;
-  };
+  today: PeriodData;
+  week: PeriodData;
+  month: PeriodData;
+  year: PeriodData;
+  topSales: TopSalesProduct[];
+  priceRange: PriceRangeData[];
 }

@@ -11,6 +11,8 @@ import orderRouter from './modules/order/order.module';
 import inquiryRouter from './modules/inquiry/inquiry.module';
 import notificationRouter from './modules/notification/notification.module';
 import dashboardRouter from './modules/dashboard/dashboard.module';
+import metadataRouter from './modules/metadata/metadata.module';
+import s3Router from './modules/s3/s3.module';
 import { errorHandler } from './common/middlewares/errorHandler';
 
 const app = express();
@@ -29,15 +31,18 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use('/auth', authRouter);
-app.use('/user', userRouter);
-app.use('/store', storeRouter);
-app.use('/product', productRouter);
+app.use('/users', userRouter);
+app.use('/stores', storeRouter);
+app.use('/products', productRouter);
+app.use('/product', reviewRouter);
 app.use('/review', reviewRouter);
 app.use('/cart', cartRouter);
-app.use('/order', orderRouter);
-app.use('/inquiry', inquiryRouter);
-app.use('/notification', notificationRouter);
+app.use('/orders', orderRouter);
+app.use('/inquiries', inquiryRouter);
+app.use('/notifications', notificationRouter);
 app.use('/dashboard', dashboardRouter);
+app.use('/metadata', metadataRouter);
+app.use('/s3', s3Router);
 
 app.use(errorHandler);
 

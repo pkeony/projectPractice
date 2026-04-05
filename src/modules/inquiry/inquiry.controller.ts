@@ -10,6 +10,16 @@ import {
 const inquiryService = new InquiryService();
 
 export class InquiryController {
+  async getMyInquiries(req: AuthRequest, res: Response): Promise<void> {
+    const userId = req.user!.userId;
+    const page = Number(req.query.page) || 1;
+    const pageSize = Number(req.query.pageSize) || 10;
+
+    const result = await inquiryService.getMyInquiries(userId, page, pageSize);
+
+    res.status(200).json(result);
+  }
+
   async getInquiriesByProduct(req: AuthRequest, res: Response): Promise<void> {
     const productId = req.params.productId as string;
     const page = Number(req.query.page) || 1;

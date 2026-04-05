@@ -44,13 +44,13 @@ async function main() {
   console.log('📊 등급 생성 중...');
 
   const gradeGreen = await prisma.grade.create({
-    data: { id: 'grade_green', name: 'Green', rate: 1, minAmout: 0 },
+    data: { id: 'grade_green', name: 'Green', rate: 1, minAmount: 0 },
   });
   const gradeBlue = await prisma.grade.create({
-    data: { id: 'grade_blue', name: 'Blue', rate: 3, minAmout: 100000 },
+    data: { id: 'grade_blue', name: 'Blue', rate: 3, minAmount: 100000 },
   });
   const gradePurple = await prisma.grade.create({
-    data: { id: 'grade_purple', name: 'Purple', rate: 5, minAmout: 500000 },
+    data: { id: 'grade_purple', name: 'Purple', rate: 5, minAmount: 500000 },
   });
 
   console.log('✅ 등급 3개 생성 완료!\n');
@@ -60,20 +60,26 @@ async function main() {
   // ============================================
   console.log('📏 사이즈 생성 중...');
 
+  const sizeFree = await prisma.size.create({
+    data: { id: 1, name: 'Free', nameEn: 'Free', nameKo: '프리' },
+  });
+  const sizeXS = await prisma.size.create({
+    data: { id: 2, name: 'XS', nameEn: 'Extra Small', nameKo: '극소' },
+  });
   const sizeS = await prisma.size.create({
-    data: { id: 1, name: 'S', nameEn: 'Small', nameKo: '소' },
+    data: { id: 3, name: 'S', nameEn: 'Small', nameKo: '소' },
   });
   const sizeM = await prisma.size.create({
-    data: { id: 2, name: 'M', nameEn: 'Medium', nameKo: '중' },
+    data: { id: 4, name: 'M', nameEn: 'Medium', nameKo: '중' },
   });
   const sizeL = await prisma.size.create({
-    data: { id: 3, name: 'L', nameEn: 'Large', nameKo: '대' },
+    data: { id: 5, name: 'L', nameEn: 'Large', nameKo: '대' },
   });
   const sizeXL = await prisma.size.create({
-    data: { id: 4, name: 'XL', nameEn: 'Extra Large', nameKo: '특대' },
+    data: { id: 6, name: 'XL', nameEn: 'Extra Large', nameKo: '특대' },
   });
 
-  console.log('✅ 사이즈 4개 생성 완료!\n');
+  console.log('✅ 사이즈 6개 생성 완료!\n');
 
   // ============================================
   // 4. Category (카테고리)
@@ -81,19 +87,28 @@ async function main() {
   console.log('📂 카테고리 생성 중...');
 
   const catShoes = await prisma.category.create({
-    data: { name: '신발' },
+    data: { name: 'SHOES' },
   });
-  const catClothes = await prisma.category.create({
-    data: { name: '의류' },
+  const catTop = await prisma.category.create({
+    data: { name: 'TOP' },
   });
-  const catAccessory = await prisma.category.create({
-    data: { name: '액세서리' },
+  const catBottom = await prisma.category.create({
+    data: { name: 'BOTTOM' },
   });
-  const catBag = await prisma.category.create({
-    data: { name: '가방' },
+  const catDress = await prisma.category.create({
+    data: { name: 'DRESS' },
+  });
+  const catOuter = await prisma.category.create({
+    data: { name: 'OUTER' },
+  });
+  const catSkirt = await prisma.category.create({
+    data: { name: 'SKIRT' },
+  });
+  const catAcc = await prisma.category.create({
+    data: { name: 'ACC' },
   });
 
-  console.log('✅ 카테고리 4개 생성 완료!\n');
+  console.log('✅ 카테고리 7개 생성 완료!\n');
 
   // ============================================
   // 5. User (유저)
@@ -247,7 +262,7 @@ async function main() {
   const product3 = await prisma.product.create({
     data: {
       storeId: store1.id,
-      categoryId: catClothes.id,
+      categoryId: catTop.id,
       name: '나이키 드라이핏 티셔츠',
       price: 45000,
       discountRate: 20,
@@ -261,7 +276,7 @@ async function main() {
   const product4 = await prisma.product.create({
     data: {
       storeId: store2.id,
-      categoryId: catClothes.id,
+      categoryId: catOuter.id,
       name: '오버사이즈 후드티',
       price: 68000,
       content: '편안한 오버핏 후드티. 남녀공용.',
@@ -273,7 +288,7 @@ async function main() {
   const product5 = await prisma.product.create({
     data: {
       storeId: store2.id,
-      categoryId: catAccessory.id,
+      categoryId: catAcc.id,
       name: '스테인리스 시계',
       price: 250000,
       discountRate: 15,
@@ -286,7 +301,7 @@ async function main() {
   const product6 = await prisma.product.create({
     data: {
       storeId: store2.id,
-      categoryId: catBag.id,
+      categoryId: catAcc.id,
       name: '캔버스 토트백',
       price: 35000,
       content: '데일리로 사용하기 좋은 캔버스 토트백.',
@@ -623,8 +638,8 @@ async function main() {
   console.log('🎉 시드 완료! 생성된 데이터:');
   console.log('========================================');
   console.log('📊 등급:     3개 (Green, Blue, Purple)');
-  console.log('📏 사이즈:   4개 (S, M, L, XL)');
-  console.log('📂 카테고리: 4개 (신발, 의류, 액세서리, 가방)');
+  console.log('📏 사이즈:   6개 (Free, XS, S, M, L, XL)');
+  console.log('📂 카테고리: 7개 (SHOES, TOP, BOTTOM, DRESS, OUTER, SKIRT, ACC)');
   console.log('👤 유저:     5명 (SELLER 2, BUYER 3)');
   console.log('🏪 가게:     2개');
   console.log('❤️ 좋아요:   5개');
