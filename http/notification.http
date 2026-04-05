@@ -1,0 +1,75 @@
+
+@baseUrl = http://localhost:3001
+
+### 🔑 BUYER 로그인
+# @name loginBuyer1
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer1@test.com",
+  "password": "password123"
+}
+
+### 🔑 SELLER 로그인
+# @name loginSeller1
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "seller1@test.com",
+  "password": "password123"
+}
+
+###
+@buyerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290MnUwMDA5YjBldjY2eTNzZjFtIiwiZW1haWwiOiJidXllcjFAdGVzdC5jb20iLCJ0eXBlIjoiQlVZRVIiLCJpYXQiOjE3NzUyOTM4MjcsImV4cCI6MTc3NTI5NzQyN30.fdbBViOjPN7w-lv9k9UawRJPq_xciqWRKG2xqWj9uMo
+@sellerToken = {{loginSeller1.response.body.accessToken}}
+
+### ============================================
+### 📡 1. SSE 스트림 연결 (브라우저에서 테스트!)
+### REST Client에서는 SSE 테스트가 어려워
+### 브라우저 콘솔에서 아래 코드 실행:
+### ============================================
+### 브라우저 콘솔:
+### const es = new EventSource('http://localhost:3001/notification/stream', {
+###   headers: { 'Authorization': 'Bearer 여기에토큰' }
+### });
+### es.onmessage = (e) => console.log('🔔', JSON.parse(e.data));
+### es.onerror = (e) => console.log('❌ SSE 에러:', e);
+
+### ============================================
+### 🔔 2. 내 알림 목록 조회
+### ============================================
+# @name getNotifications
+GET {{baseUrl}}/notification?page=1&limit=20
+Authorization: Bearer {{buyerToken}}
+
+### ============================================
+### 🔔 3. 알림 읽음 처리
+### ============================================
+# @name markAsRead
+PATCH {{baseUrl}}/notification/cmnjwot47002nb0ev1vvkhwoe/read
+Authorization: Bearer {{buyerToken}}
+
+### ============================================
+### 🔔 4. 전체 읽음 처리
+### ============================================
+# @name markAllAsRead
+PATCH {{baseUrl}}/notification/read-all
+Authorization: Bearer {{buyerToken}}
+
+### ============================================
+### 🧪 5. SSE 테스트: 문의 작성 → seller에게 알림
+### (seller1을 SSE 연결 후, buyer1이 문의 작성)
+### ============================================
+# @name createInquiryForTest
+POST {{baseUrl}}/inquiry
+Content-Type: application/json
+Authorization: Bearer {{buyerToken}}
+
+{
+  "productId": "cmnjwot33000ob0ev472rkvvh",
+  "title": "SSE 테스트 문의!",
+  "content": "이 문의를 작성하면 seller1에게 실시간 알림이 가야합니다!",
+  "isSecret": false
+}

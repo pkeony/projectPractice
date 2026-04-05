@@ -1,0 +1,93 @@
+
+@baseUrl = http://localhost:3001
+
+### ============================================
+### 🔑 BUYER 로그인
+### ============================================
+# @name loginBuyer1
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer1@test.com",
+  "password": "password123"
+}
+
+###
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290MnUwMDA5YjBldjY2eTNzZjFtIiwiZW1haWwiOiJidXllcjFAdGVzdC5jb20iLCJ0eXBlIjoiQlVZRVIiLCJpYXQiOjE3NzUyODI5ODAsImV4cCI6MTc3NTI4NjU4MH0.wngRm8EPG7viIkF77AyjUSpnnDuoYkN9Oxvv8pj-QmI
+### ============================================
+### 🛒 1. 내 장바구니 조회
+### ============================================
+# @name getCart
+GET {{baseUrl}}/cart
+Authorization: Bearer {{token}}
+
+### ============================================
+### 🛒 2. 장바구니에 상품 추가
+### Prisma Studio에서 productId 확인!
+### ============================================
+# @name addItem
+POST {{baseUrl}}/cart/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "cmnjwot33000ob0ev472rkvvh",
+  "sizeId": 2,
+  "quantity": 1
+}
+
+### ============================================
+### 🛒 3. 같은 상품 또 추가 (수량 증가 확인)
+### ============================================
+# @name addItemAgain
+POST {{baseUrl}}/cart/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "cmnjwot37000ub0evtb5ppi8s",
+  "sizeId": 2,
+  "quantity": 2
+}
+
+### ============================================
+### 🛒 4. 수량 변경
+### cartItemId는 장바���니 조회 응답에서 확인!
+### ============================================
+# @name updateItem
+PATCH {{baseUrl}}/cart/items/cmnjwot3d001ib0evqotea7zv
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "quantity": 5
+}
+
+### ============================================
+### 🛒 5. 아이템 삭제
+### ============================================
+# @name deleteItem
+DELETE {{baseUrl}}/cart/items/cmnjwot3d001ib0evqotea7zv
+Authorization: Bearer {{token}}
+
+### ============================================
+### ❌ 6. 품절 상품 추가 시도 → 400
+### (캔버스 토트백 = isSoldOut: true)
+### ============================================
+# @name addSoldOut
+POST {{baseUrl}}/cart/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "여기에_품절상품_productId",
+  "sizeId": 2,
+  "quantity": 1
+}
+
+### ============================================
+### ❌ 7. 토큰 없이 조회 → 401
+### ============================================
+# @name noAuth
+GET {{baseUrl}}/cart

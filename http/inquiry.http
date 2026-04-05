@@ -1,0 +1,140 @@
+
+@baseUrl = http://localhost:3001
+
+### 🔑 BUYER 로그인
+# @name loginBuyer1
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer1@test.com",
+  "password": "password123"
+}
+
+### 🔑 SELLER 로그인
+# @name loginSeller1
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "seller1@test.com",
+  "password": "password123"
+}
+
+###
+@buyerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290MnUwMDA5YjBldjY2eTNzZjFtIiwiZW1haWwiOiJidXllcjFAdGVzdC5jb20iLCJ0eXBlIjoiQlVZRVIiLCJpYXQiOjE3NzUyODY5OTAsImV4cCI6MTc3NTI5MDU5MH0.QxqhogjD5-YoVq6KhMQHNzWQ74XhN0PRlgGSbnmcaCo
+@sellerToken = {{loginSeller1.response.body.accessToken}}
+
+### ============================================
+### ❓ 1. 문의 작성 (공개)
+### ============================================
+# @name createInquiry
+POST {{baseUrl}}/inquiry
+Content-Type: application/json
+Authorization: Bearer {{buyerToken}}
+
+{
+  "productId": "여기에_productId",
+  "title": "사이즈 문의드립니다",
+  "content": "평소 260 신는데 이 상품은 정사이즈인가요?",
+  "isSecret": false
+}
+
+### ============================================
+### ❓ 2. 문의 작성 (비밀글)
+### ============================================
+# @name createSecretInquiry
+POST {{baseUrl}}/inquiry
+Content-Type: application/json
+Authorization: Bearer {{buyerToken}}
+
+{
+  "productId": "여기에_productId",
+  "title": "교환 문의",
+  "content": "지난번에 구매한 상품 교환 가능한가요?",
+  "isSecret": true
+}
+
+### ============================================
+### ❓ 3. 상품별 문의 목록 (비로그인 - 비밀글 가려짐)
+### ============================================
+# @name getInquiriesNoAuth
+GET {{baseUrl}}/inquiry/product/여기에_productId?page=1&limit=10
+
+### ============================================
+### ❓ 4. 상품별 문의 목록 (로그인 - 본인 비밀글 보임)
+### ============================================
+# @name getInquiriesAuth
+GET {{baseUrl}}/inquiry/product/여기에_productId?page=1&limit=10
+Authorization: Bearer {{buyerToken}}
+
+### ============================================
+### ❓ 5. 문의 상세
+### ============================================
+# @name getInquiry
+GET {{baseUrl}}/inquiry/여기에_inquiryId
+Authorization: Bearer {{buyerToken}}
+
+### ============================================
+### ❓ 6. 문의 수정
+### ============================================
+# @name updateInquiry
+PATCH {{baseUrl}}/inquiry/여기에_inquiryId
+Content-Type: application/json
+Authorization: Bearer {{buyerToken}}
+
+{
+  "title": "사이즈 문의 (수정)",
+  "content": "265도 괜찮을까요?"
+}
+
+### ============================================
+### 💬 7. 답변 작성 (SELLER)
+### ============================================
+# @name createReply
+POST {{baseUrl}}/inquiry/여기에_inquiryId/reply
+Content-Type: application/json
+Authorization: Bearer {{sellerToken}}
+
+{
+  "content": "안녕하세요! 정사이즈로 추천드립니다. 260이면 딱 맞으실 거예요."
+}
+
+### ============================================
+### 💬 8. 답변 수정
+### ============================================
+# @name updateReply
+PATCH {{baseUrl}}/inquiry/reply/여기에_replyId
+Content-Type: application/json
+Authorization: Bearer {{sellerToken}}
+
+{
+  "content": "안녕하세요! 이 제품은 살짝 크게 나오니 정사이즈 추천드립니다."
+}
+
+### ============================================
+### 💬 9. 답변 삭제 (상태 WaitingAnswer로 롤백)
+### ============================================
+# @name deleteReply
+DELETE {{baseUrl}}/inquiry/reply/여기에_replyId
+Authorization: Bearer {{sellerToken}}
+
+### ============================================
+### ❌ 10. 답변 달린 문의 수정 시도 → 400
+### (먼저 답변 작성 후 테스트!)
+### ============================================
+# @name updateAnsweredInquiry
+PATCH {{baseUrl}}/inquiry/여기에_답변있는_inquiryId
+Content-Type: application/json
+Authorization: Bearer {{buyerToken}}
+
+{
+  "title": "수정 시도!"
+}
+
+### ============================================
+### ❓ 11. 문의 삭제
+### ============================================
+# @name deleteInquiry
+DELETE {{baseUrl}}/inquiry/여기에_inquiryId
+Authorization: Bearer {{buyerToken}}
