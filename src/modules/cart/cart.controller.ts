@@ -17,48 +17,68 @@ function transformCartSize(size: any) {
   };
 }
 
-function transformCartResponse(result: any) {
-  const cart = result.cart;
+function transformItem(item: any) {
   return {
-    ...result,
-    cart: {
-      ...cart,
-      items: cart.items.map((item: any) => ({
-        ...item,
-        size: transformCartSize(item.size),
-      })),
+    ...item,
+    size: transformCartSize(item.size),
+    product: {
+      ...item.product,
+      stocks: item.product.stocks
+        ? item.product.stocks.map((s: any) => ({
+            ...s,
+            size: transformCartSize(s.size),
+          }))
+        : [],
     },
   };
+}
+
+// GET /cart → Cart 전체
+function transformCartToFrontend(result: any) {
+  const cart = result.cart;
+  return {
+    id: cart.id,
+    buyerId: cart.buyerId,
+    createdAt: cart.createdAt,
+    updatedAt: cart.updatedAt,
+    items: cart.items.map((item: any) => transformItem(item)),
+  };
+}
+
+// PATCH /cart → CartItem[] 만
+function transformCartItems(result: any): any[] {
+  return result.cart.items.map((item: any) => transformItem(item));
 }
 
 export class CartController {
   async getMyCart(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
-
     const result = await cartService.getMyCart(buyerId);
-
-    res.status(200).json(transformCartResponse(result));
+    res.status(200).json(transformCartToFrontend(result));
   }
 
   async updateCart(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
 
-    // Body: { productId, sizes: [{ sizeId, quantity }] }
+    if (!req.body || (!req.body.productId && !req.body.sizes)) {
+      const result = await cartService.getMyCart(buyerId);
+      res.status(200).json(transformCartToFrontend(result));
+      return;
+    }
+
     const { productId, sizes } = req.body;
 
     if (!productId || !sizes || !Array.isArray(sizes)) {
-      // fallback to add single item
       validateAddCartItem(req.body);
       const result = await cartService.addCartItem(buyerId, {
         productId: req.body.productId,
         sizeId: req.body.sizeId,
         quantity: req.body.quantity,
       });
-      res.status(200).json(transformCartResponse(result));
+      res.status(200).json(transformCartItems(result));
       return;
     }
 
-    // Handle multiple sizes
     let lastResult: any;
     for (const sizeEntry of sizes) {
       lastResult = await cartService.addCartItem(buyerId, {
@@ -68,49 +88,40 @@ export class CartController {
       });
     }
 
-    res.status(200).json(transformCartResponse(lastResult));
+    res.status(200).json(transformCartItems(lastResult));
   }
 
   async addCartItem(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
-
     validateAddCartItem(req.body);
-
     const result = await cartService.addCartItem(buyerId, {
       productId: req.body.productId,
       sizeId: req.body.sizeId,
       quantity: req.body.quantity,
     });
-
-    res.status(201).json(transformCartResponse(result));
+    res.status(201).json(transformCartToFrontend(result));
   }
 
   async updateCartItem(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
     const cartItemId = req.params.cartItemId as string;
-
     validateUpdateCartItem(req.body);
-
     const result = await cartService.updateCartItem(buyerId, cartItemId, {
       quantity: req.body.quantity,
     });
-
-    res.status(200).json(transformCartResponse(result));
+    res.status(200).json(transformCartToFrontend(result));
   }
 
   async deleteCartItem(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
     const cartItemId = req.params.cartItemId as string;
-
     const result = await cartService.deleteCartItem(buyerId, cartItemId);
-
-    res.status(200).json(transformCartResponse(result));
+    res.status(200).json(transformCartToFrontend(result));
   }
 
   async getCartItem(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
     const cartItemId = req.params.cartItemId as string;
-
     const result = await cartService.getMyCart(buyerId);
     const item = result.cart.items.find((i: any) => i.id === cartItemId);
 
@@ -119,9 +130,6 @@ export class CartController {
       return;
     }
 
-    res.status(200).json({
-      ...item,
-      size: transformCartSize(item.size),
-    });
+    res.status(200).json(transformItem(item));
   }
 }

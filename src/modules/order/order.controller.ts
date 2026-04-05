@@ -27,6 +27,9 @@ export class OrderController {
 
   async createOrder(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
+    if (req.body.phone && !req.body.phoneNumber) {
+      req.body.phoneNumber = req.body.phone;
+    }
 
     validateCreateOrder(req.body);
 

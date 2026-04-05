@@ -70,7 +70,12 @@ export class ProductRepository {
     const where: any = {};
 
     if (categoryName) {
-      where.category = { name: categoryName };
+      where.category = {
+        name: {
+          equals: categoryName,
+          mode: 'insensitive', // ✅ 대소문자 무시!
+        },
+      };
     }
 
     if (search) {

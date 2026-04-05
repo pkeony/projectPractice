@@ -9,7 +9,12 @@ const productRepository = new ProductRepository();
 const storeRepository = new StoreRepository();
 const inquiryRepository = new InquiryRepository();
 
-function calcDiscountPrice(price: number, discountRate: number, discountStartTime: Date | null, discountEndTime: Date | null): number {
+function calcDiscountPrice(
+  price: number,
+  discountRate: number,
+  discountStartTime: Date | null,
+  discountEndTime: Date | null
+): number {
   const now = new Date();
   const isActive =
     discountRate > 0 &&
@@ -36,7 +41,13 @@ export class ProductService {
           product.reviews.length
         : 0;
 
-    const ratingCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const ratingCounts: Record<number, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
     for (const review of product.reviews) {
       if (ratingCounts[review.rating] !== undefined) {
         ratingCounts[review.rating]++;
@@ -45,6 +56,12 @@ export class ProductService {
 
     return {
       ...product,
+      discountPrice: calcDiscountPrice(
+        product.price,
+        product.discountRate,
+        product.discountStartTime,
+        product.discountEndTime
+      ),
       stocks: product.stocks.map((s) => ({
         id: s.id,
         productId: s.productId,
@@ -58,7 +75,15 @@ export class ProductService {
       avgRating: Math.round(avgRating * 10) / 10,
       reviewsCount: product.reviews.length,
       reviewsRating: Math.round(avgRating * 10) / 10,
-      ratingCounts,
+      // ✅ 프론트의 ReviewCount 타입에 맞춤!
+      reviews: {
+        rate1Length: ratingCounts[1],
+        rate2Length: ratingCounts[2],
+        rate3Length: ratingCounts[3],
+        rate4Length: ratingCounts[4],
+        rate5Length: ratingCounts[5],
+        sumScore: Math.round(avgRating * 10) / 10,
+      },
     };
   }
 
@@ -110,7 +135,10 @@ export class ProductService {
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
         sales: (p as any).orderItems
-          ? (p as any).orderItems.reduce((sum: number, oi: any) => sum + oi.quantity, 0)
+          ? (p as any).orderItems.reduce(
+              (sum: number, oi: any) => sum + oi.quantity,
+              0
+            )
           : 0,
       };
     });
@@ -256,13 +284,14 @@ export class ProductService {
     const isStoreOwner = product.store.userId === userId;
     const orderBy = sort === 'oldest' ? 'asc' : 'desc';
 
-    const { inquiries, total } = await inquiryRepository.findByProductIdFiltered(
-      productId,
-      page,
-      pageSize,
-      orderBy,
-      status
-    );
+    const { inquiries, total } =
+      await inquiryRepository.findByProductIdFiltered(
+        productId,
+        page,
+        pageSize,
+        orderBy,
+        status
+      );
 
     const list = inquiries.map((inquiry) => {
       if (inquiry.isSecret && inquiry.userId !== userId && !isStoreOwner) {
