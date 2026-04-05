@@ -27,9 +27,20 @@ export class OrderController {
 
   async createOrder(req: AuthRequest, res: Response): Promise<void> {
     const buyerId = req.user!.userId;
+
+    // ✅ 디버깅: 실제로 뭐가 들어오는지 확인!
+    console.log('=== ORDER REQUEST BODY ===');
+    console.log(JSON.stringify(req.body, null, 2));
+
+    // phone → phoneNumber 매핑
     if (req.body.phone && !req.body.phoneNumber) {
       req.body.phoneNumber = req.body.phone;
     }
+
+    // ✅ 디버깅: items 확인
+    const items = req.body.orderItems || req.body.items;
+    console.log('=== ITEMS ===');
+    console.log(JSON.stringify(items, null, 2));
 
     validateCreateOrder(req.body);
 
@@ -37,7 +48,7 @@ export class OrderController {
       name: req.body.name,
       phoneNumber: req.body.phoneNumber,
       address: req.body.address,
-      usePoint: req.body.usePoint,
+      usePoint: req.body.usePoint || 0,
       items: req.body.orderItems || req.body.items,
     });
 

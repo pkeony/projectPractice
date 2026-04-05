@@ -18,14 +18,29 @@ function transformCartSize(size: any) {
 }
 
 function transformItem(item: any) {
+  const reviews = item.product.reviews ?? [];
+  const reviewsRating =
+    reviews.length > 0
+      ? Math.round(
+          (reviews.reduce((sum: number, r: any) => sum + r.rating, 0) /
+            reviews.length) *
+            10
+        ) / 10
+      : 0;
+
   return {
     ...item,
     size: transformCartSize(item.size),
     product: {
       ...item.product,
+      reviewsRating,
+      reviews: undefined, // raw reviews 제거
       stocks: item.product.stocks
         ? item.product.stocks.map((s: any) => ({
-            ...s,
+            id: s.id,
+            productId: s.productId,
+            sizeId: s.sizeId,
+            quantity: s.quantity,
             size: transformCartSize(s.size),
           }))
         : [],
