@@ -24,6 +24,8 @@ function transformOrderItems(items: any[]) {
       : undefined,
     size: item.size
       ? {
+          id: item.size.id,
+          name: item.size.name,
           size: { en: item.size.nameEn, ko: item.size.nameKo },
         }
       : undefined,

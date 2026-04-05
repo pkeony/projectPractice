@@ -102,8 +102,6 @@ export class UserService {
       if (!isCurrentPasswordValid) {
         throw new AppError(401, '현재 비밀번호가 틀렸습니다', 'Unauthorized');
       }
-
-      updateData.image = updateData.image;
     }
 
     const data: { name?: string; image?: string; password?: string } = {};
