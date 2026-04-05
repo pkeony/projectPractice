@@ -36,11 +36,10 @@ const orderSummaryInclude = {
           image: true,
         },
       },
-      size: {
-        select: {
-          id: true,
-          name: true,
-        },
+      size: true, // ✅ nameEn, nameKo 포함하려면 전체 include
+      review: {
+        // ✅ 리뷰 존재 여부 확인용 추가!
+        select: { id: true },
       },
     },
   },

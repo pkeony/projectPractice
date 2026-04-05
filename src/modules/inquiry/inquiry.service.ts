@@ -14,18 +14,31 @@ export class InquiryService {
   async getMyInquiries(
     userId: string,
     page: number,
-    pageSize: number
+    pageSize: number,
+    status?: string
   ): Promise<any> {
+    const store = await prisma.store.findUnique({
+      where: { userId },
+    });
+
+    if (store) {
+      const { inquiries, total } = await inquiryRepository.findByStoreId(
+        store.id,
+        page,
+        pageSize,
+        status
+      );
+      return { list: inquiries, totalCount: total };
+    }
+
     const { inquiries, total } = await inquiryRepository.findByUserId(
       userId,
       page,
-      pageSize
+      pageSize,
+      status
     );
 
-    return {
-      list: inquiries,
-      totalCount: total,
-    };
+    return { list: inquiries, totalCount: total };
   }
 
   async getInquiriesByProduct(

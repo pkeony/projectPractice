@@ -60,6 +60,29 @@ export class InquiryRepository {
     }) as Promise<InquiryWithDetail | null>;
   }
 
+  async findByStoreId(
+    storeId: string,
+    page: number,
+    pageSize: number,
+    status?: string
+  ): Promise<{ inquiries: InquirySummary[]; total: number }> {
+    const skip = (page - 1) * pageSize;
+    const where: any = { product: { storeId } };
+    if (status) where.status = status;
+
+    const [inquiries, total] = await Promise.all([
+      prisma.inquiry.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: inquiryDetailInclude,
+      }),
+      prisma.inquiry.count({ where }),
+    ]);
+    return { inquiries: inquiries as InquirySummary[], total };
+  }
+
   async findByProductId(
     productId: string,
     page: number,
@@ -112,13 +135,16 @@ export class InquiryRepository {
   async findByUserId(
     userId: string,
     page: number,
-    pageSize: number
+    pageSize: number,
+    status?: string
   ): Promise<{ inquiries: InquirySummary[]; total: number }> {
     const skip = (page - 1) * pageSize;
+    const where: any = { userId };
+    if (status) where.status = status;
 
     const [inquiries, total] = await Promise.all([
       prisma.inquiry.findMany({
-        where: { userId },
+        where,
         skip,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
@@ -126,7 +152,6 @@ export class InquiryRepository {
       }),
       prisma.inquiry.count({ where: { userId } }),
     ]);
-
     return { inquiries: inquiries as InquirySummary[], total };
   }
 

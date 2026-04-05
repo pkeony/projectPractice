@@ -14,8 +14,14 @@ export class InquiryController {
     const userId = req.user!.userId;
     const page = Number(req.query.page) || 1;
     const pageSize = Number(req.query.pageSize) || 10;
+    const status = req.query.status as string | undefined;
 
-    const result = await inquiryService.getMyInquiries(userId, page, pageSize);
+    const result = await inquiryService.getMyInquiries(
+      userId,
+      page,
+      pageSize,
+      status
+    );
 
     res.status(200).json(result);
   }
