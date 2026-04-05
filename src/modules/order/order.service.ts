@@ -61,7 +61,16 @@ export class OrderService {
       limit
     );
 
-    return orders.map(transformOrder);
+    // ✅ 프론트 OrdersResponse 형태로 반환!
+    return {
+      data: orders.map(transformOrder),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async getOrderById(userId: string, orderId: string): Promise<any> {

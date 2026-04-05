@@ -1,9 +1,10 @@
 import { AppError } from '../../../common/types/errors';
 
 export const validateCreateReview = (body: any): void => {
-  const { orderItemId, productId, rating, content } = body;
+  const { orderItemId, rating, content } = body;
 
-  if (!orderItemId || !productId || rating === undefined || !content) {
+  // ✅ productId는 URL 파라미터에서 오므로 body 체크 제거!
+  if (!orderItemId || rating === undefined || !content) {
     throw new AppError(400, '모든 필드를 입력해주세요.', 'Bad Request');
   }
 
