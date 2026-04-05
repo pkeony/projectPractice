@@ -206,10 +206,27 @@ export class OrderService {
         });
       }
 
+      // ✅ 결제 생성 + 주문 상태 변경
+      const paymentPrice = subtotal - createOrderDto.usePoint;
+      await tx.payment.create({
+        data: {
+          orderId: createdOrder.id,
+          price: paymentPrice,
+          status: 'Paid',
+        },
+      });
+
+      await tx.order.update({
+        where: { id: createdOrder.id },
+        data: { status: 'CompletedPayment' },
+      });
+
       return createdOrder;
     });
 
-    return transformOrder(order);
+    // 최신 상태로 다시 조회
+    const completedOrder = await orderRepository.findById(order.id);
+    return transformOrder(completedOrder);
   }
 
   async updateOrder(
