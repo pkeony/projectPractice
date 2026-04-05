@@ -9,23 +9,17 @@ import {
 const inquiryRouter = Router();
 const inquiryController = new InquiryController();
 
-// 문의
+// 내 문의 조회
 inquiryRouter.get(
-  '/product/:productId',
-  optionalAuthMiddleware,
-  asyncHandler(inquiryController.getInquiriesByProduct)
+  '/',
+  authMiddleware,
+  asyncHandler(inquiryController.getMyInquiries)
 );
 
 inquiryRouter.get(
   '/:inquiryId',
   optionalAuthMiddleware,
   asyncHandler(inquiryController.getInquiryById)
-);
-
-inquiryRouter.post(
-  '/',
-  authMiddleware,
-  asyncHandler(inquiryController.createInquiry)
 );
 
 inquiryRouter.patch(
@@ -42,21 +36,15 @@ inquiryRouter.delete(
 
 // 답변
 inquiryRouter.post(
-  '/:inquiryId/reply',
+  '/:inquiryId/replies',
   authMiddleware,
   asyncHandler(inquiryController.createReply)
 );
 
 inquiryRouter.patch(
-  '/reply/:replyId',
+  '/:replyId/replies',
   authMiddleware,
   asyncHandler(inquiryController.updateReply)
-);
-
-inquiryRouter.delete(
-  '/reply/:replyId',
-  authMiddleware,
-  asyncHandler(inquiryController.deleteReply)
 );
 
 export default inquiryRouter;

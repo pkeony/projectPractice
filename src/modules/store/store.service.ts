@@ -2,19 +2,37 @@ import { StoreRepository } from './store.repository';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { AppError } from '../../common/types/errors';
-import { UserType } from '@prisma/client';
 
 const storeRepository = new StoreRepository();
 
 export class StoreService {
-  async getMyStore(userId: string) {
-    const store = await storeRepository.findByUserId(userId);
+  async getMyStoreDetail(userId: string) {
+    const store = await storeRepository.findByUserIdWithStats(userId);
 
     if (!store) {
       throw new AppError(404, '등록된 가게가 없습니다', 'Not Found');
     }
 
     return store;
+  }
+
+  async getMyStoreProducts(userId: string, page: number, pageSize: number) {
+    const store = await storeRepository.findByUserId(userId);
+
+    if (!store) {
+      throw new AppError(404, '등록된 가게가 없습니다', 'Not Found');
+    }
+
+    const { products, total } = await storeRepository.findProductsByStoreId(
+      store.id,
+      page,
+      pageSize
+    );
+
+    return {
+      list: products,
+      totalCount: total,
+    };
   }
 
   async getStoreById(storeId: string, userId?: string) {
@@ -25,40 +43,13 @@ export class StoreService {
     }
 
     const isLiked = userId
-      ? store.likes.some((like) => like.userId === userId) // 유져id가 있으면 좋아요했는지 확인하기
-      : //.some() 배열에서 조건을 맞는게 하나라도 있으면 true
-        false;
+      ? store.likes.some((like) => like.userId === userId)
+      : false;
 
     return {
       ...store,
       likeCount: store.likes.length,
       isLiked,
-    };
-  }
-
-  async getStores(page: number, limit: number, userId?: string) {
-    const { stores, total } = await storeRepository.findAll(page, limit);
-
-    const storesWithInfo = stores.map((store) => {
-      //.map 배열의 각 요소를 변환
-      const isLiked = userId
-        ? store.likes.some((like) => like.userId === userId)
-        : false;
-
-      return {
-        // 가게마다 likeCount와 lsLiked를 추가
-        ...store,
-        likeCount: store.likes.length,
-        isLiked,
-      };
-    });
-
-    return {
-      stores: storesWithInfo,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -86,11 +77,19 @@ export class StoreService {
     return store;
   }
 
-  async updateStore(userId: string, updateStoreDto: UpdateStoreDto) {
+  async updateStore(
+    userId: string,
+    storeId: string,
+    updateStoreDto: UpdateStoreDto
+  ) {
     const store = await storeRepository.findByUserId(userId);
 
     if (!store) {
       throw new AppError(404, '등록된 가게가 없습니다', 'Not Found');
+    }
+
+    if (store.id !== storeId) {
+      throw new AppError(403, '본인의 가게만 수정할 수 있습니다.', 'Forbidden');
     }
 
     const updateData: UpdateStoreDto = {};
@@ -113,7 +112,7 @@ export class StoreService {
     return updatedStore;
   }
 
-  async toggleLike(userId: string, storeId: string) {
+  async addFavorite(userId: string, storeId: string) {
     const store = await storeRepository.findById(storeId);
 
     if (!store) {
@@ -123,11 +122,27 @@ export class StoreService {
     const existingLike = await storeRepository.findLike(userId, storeId);
 
     if (existingLike) {
-      await storeRepository.deleteLike(userId, storeId);
-      return { isliked: false, message: '좋아요가 취소되었습니다.' };
+      throw new AppError(409, '이미 관심 스토어로 등록되었습니다.', 'Conflict');
     }
 
     await storeRepository.createLike(userId, storeId);
-    return { isLiked: true, message: '좋아요가 등록되었습니다.' };
+    return { isLiked: true, message: '관심 스토어로 등록되었습니다.' };
+  }
+
+  async removeFavorite(userId: string, storeId: string) {
+    const store = await storeRepository.findById(storeId);
+
+    if (!store) {
+      throw new AppError(404, '가게를 찾을 수 없습니다', 'Not Found');
+    }
+
+    const existingLike = await storeRepository.findLike(userId, storeId);
+
+    if (!existingLike) {
+      throw new AppError(404, '관심 스토어로 등록되지 않았습니다.', 'Not Found');
+    }
+
+    await storeRepository.deleteLike(userId, storeId);
+    return { isLiked: false, message: '관심 스토어가 해제되었습니다.' };
   }
 }

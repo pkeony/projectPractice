@@ -7,15 +7,9 @@ const orderRouter = Router();
 const orderController = new OrderController();
 
 orderRouter.get(
-  '/me',
+  '/',
   authMiddleware,
   asyncHandler(orderController.getMyOrders)
-);
-
-orderRouter.get(
-  '/store',
-  authMiddleware,
-  asyncHandler(orderController.getStoreOrders)
 );
 
 orderRouter.get(
@@ -30,14 +24,14 @@ orderRouter.post(
   asyncHandler(orderController.createOrder)
 );
 
-orderRouter.post(
-  '/:orderId/pay',
+orderRouter.patch(
+  '/:orderId',
   authMiddleware,
-  asyncHandler(orderController.payOrder)
+  asyncHandler(orderController.updateOrder)
 );
 
-orderRouter.post(
-  '/:orderId/cancel',
+orderRouter.delete(
+  '/:orderId',
   authMiddleware,
   asyncHandler(orderController.cancelOrder)
 );

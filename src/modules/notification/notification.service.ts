@@ -1,6 +1,5 @@
 import { NotificationRepository } from './notification.repository';
 import { NotificationEntity } from './types/notification.types';
-import { PaginatedResult } from '../../common/types/pagination';
 import { AppError } from '../../common/types/errors';
 import { sseManager } from './sse/see.manager';
 
@@ -11,7 +10,7 @@ export class NotificationService {
     userId: string,
     page: number,
     limit: number
-  ): Promise<PaginatedResult<NotificationEntity> & { unreadCount: number }> {
+  ): Promise<{ data: NotificationEntity[]; total: number; unreadCount: number }> {
     const { notifications, total } = await notificationRepository.findByUserId(
       userId,
       page,
@@ -23,9 +22,6 @@ export class NotificationService {
     return {
       data: notifications,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
       unreadCount,
     };
   }

@@ -29,6 +29,13 @@ export class ProductRepository {
           },
           orderBy: { createdAt: 'desc' },
         },
+        inquiries: {
+          include: {
+            user: { select: { id: true, name: true } },
+            reply: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
         _count: {
           select: { reviews: true },
         },
@@ -38,47 +45,81 @@ export class ProductRepository {
 
   async findAll(params: {
     page: number;
-    limit: number;
-    categoryId?: string;
-    storeId?: string;
-    keyword?: string;
-    sortBy?: string;
+    pageSize: number;
+    sort?: string;
+    search?: string;
+    priceMin?: number;
+    priceMax?: number;
+    size?: string;
+    favoriteStore?: string;
+    categoryName?: string;
   }) {
-    const { page, limit, categoryId, storeId, keyword, sortBy } = params;
-    const skip = (page - 1) * limit;
+    const {
+      page,
+      pageSize,
+      sort,
+      search,
+      priceMin,
+      priceMax,
+      size,
+      favoriteStore,
+      categoryName,
+    } = params;
+    const skip = (page - 1) * pageSize;
 
     const where: any = {};
 
-    if (categoryId) {
-      where.categoryId = categoryId;
+    if (categoryName) {
+      where.category = { name: categoryName };
     }
 
-    if (storeId) {
-      where.storeId = storeId;
-    }
-
-    if (keyword) {
+    if (search) {
       where.name = {
-        contains: keyword, //부분일치 검색
-        mode: 'insensitive', //대소문자 구분x
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    if (priceMin !== undefined || priceMax !== undefined) {
+      where.price = {};
+      if (priceMin !== undefined) where.price.gte = priceMin;
+      if (priceMax !== undefined) where.price.lte = priceMax;
+    }
+
+    if (size) {
+      where.stocks = {
+        some: {
+          size: { name: size },
+          quantity: { gt: 0 },
+        },
+      };
+    }
+
+    if (favoriteStore) {
+      where.store = {
+        likes: {
+          some: { userId: favoriteStore },
+        },
       };
     }
 
     let orderBy: any = { createdAt: 'desc' };
 
-    if (sortBy === 'price_asc') {
+    if (sort === 'price_asc') {
       orderBy = { price: 'asc' };
-    } else if (sortBy === 'price_desc') {
+    } else if (sort === 'price_desc') {
       orderBy = { price: 'desc' };
-    } else if (sortBy === 'oldest') {
+    } else if (sort === 'oldest') {
       orderBy = { createdAt: 'asc' };
+    } else if (sort === 'recent') {
+      orderBy = { createdAt: 'desc' };
     }
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
         skip,
-        take: limit,
+        take: pageSize,
         orderBy,
         include: {
           store: {
@@ -90,6 +131,9 @@ export class ProductRepository {
           category: true,
           stocks: {
             include: { size: true },
+          },
+          orderItems: {
+            select: { quantity: true },
           },
           _count: {
             select: { reviews: true },

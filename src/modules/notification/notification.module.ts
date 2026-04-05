@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 const notificationRouter = Router();
 const notificationController = new NotificationController();
 
-//SSE 전용 인증(쿼리 파라미터 토큰)
+//SSE 전용 인증(Authorization 헤더 또는 쿼리 파라미터 토큰)
 const sseAuthMiddleware = (req: Request, res: Response, next: Function) => {
   const token =
     (req.query.token as string) || req.headers.authorization?.split(' ')[1];
@@ -27,7 +27,7 @@ const sseAuthMiddleware = (req: Request, res: Response, next: Function) => {
 };
 
 //SSE 스트림 (asyncHandler 안 씀 ! 응답이 끊기질 않음)
-notificationRouter.get('/stream', sseAuthMiddleware, (req, res) => {
+notificationRouter.get('/sse', sseAuthMiddleware, (req, res) => {
   notificationController.stream(req as any, res);
 });
 
@@ -38,15 +38,9 @@ notificationRouter.get(
 );
 
 notificationRouter.patch(
-  '/:notificationId/read',
+  '/:alarmId/check',
   authMiddleware,
   asyncHandler(notificationController.markAsRead)
-);
-
-notificationRouter.patch(
-  '/read-all',
-  authMiddleware,
-  asyncHandler(notificationController.markAllAsRead)
 );
 
 export default notificationRouter;

@@ -151,6 +151,17 @@ export class OrderRepository {
     }) as Promise<OrderWithDetail>;
   }
 
+  async updateOrder(
+    orderId: string,
+    data: { name?: string; address?: string; phoneNumber?: string }
+  ): Promise<OrderWithDetail> {
+    return prisma.order.update({
+      where: { id: orderId },
+      data,
+      include: orderDetailInclude,
+    }) as Promise<OrderWithDetail>;
+  }
+
   async createPayment(orderId: string, price: number): Promise<void> {
     await prisma.payment.create({
       data: {

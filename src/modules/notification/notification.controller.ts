@@ -15,26 +15,22 @@ export class NotificationController {
       limit
     );
 
-    res.status(200).json(result);
+    res.status(200).json({
+      list: result.data,
+      totalCount: result.total,
+    });
   }
 
   async markAsRead(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.userId;
-    const notificationId = req.params.notificationId as string;
+    const alarmId = req.params.alarmId as string;
 
     const notification = await notificationService.markAsRead(
       userId,
-      notificationId
+      alarmId
     );
 
     res.status(200).json(notification);
-  }
-
-  async markAllAsRead(req: AuthRequest, res: Response): Promise<void> {
-    const userId = req.user!.userId;
-
-    const result = await notificationService.markAllAsRead(userId);
-    res.status(200).json(result);
   }
 
   async stream(req: AuthRequest, res: Response): Promise<void> {

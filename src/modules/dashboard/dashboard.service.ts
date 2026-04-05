@@ -2,13 +2,12 @@ import { DashboardRepository } from './dashboard.repository';
 import { StoreRepository } from '../store/store.repository';
 import {
   DashboardResponse,
-  SalesSummary,
-  DailySales,
-  TopProduct,
-  PriceRangeRevenue,
+  PeriodData,
+  PeriodStats,
+  TopSalesProduct,
+  PriceRangeData,
 } from './types/dashboard.types';
 import { AppError } from '../../common/types/errors';
-import { number } from 'superstruct';
 
 const dashboardRepository = new DashboardRepository();
 const storeRepository = new StoreRepository();
@@ -22,130 +21,177 @@ const PRICE_RANGES = [
 ];
 
 export class DashboardService {
-  async getDashboard(
-    userId: string,
-    startDate: string,
-    endDate: string
-  ): Promise<DashboardResponse> {
+  async getDashboard(userId: string): Promise<DashboardResponse> {
     const store = await storeRepository.findByUserId(userId);
 
     if (!store) {
       throw new AppError(404, '등록된 가게가 없습니다.', 'Not Found');
     }
 
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
+    const now = new Date();
 
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    // Today
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      throw new AppError(
-        400,
-        '날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)',
-        'Bad Request'
-      );
-    }
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayEnd = new Date(todayEnd);
+    yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
 
-    if (start > end) {
-      throw new AppError(
-        400,
-        '시작일이 종료일보다 클 수 없습니다.',
-        'Bad Request'
-      );
-    }
+    // This week (Mon–Sun)
+    const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - dayOfWeek);
+    const weekEnd = new Date(todayEnd);
 
-    const orders = await dashboardRepository.findCompletedOrders(
-      store.id,
-      start,
-      end
+    const prevWeekStart = new Date(weekStart);
+    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+    const prevWeekEnd = new Date(weekEnd);
+    prevWeekEnd.setDate(prevWeekEnd.getDate() - 7);
+
+    // This month
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+      999
     );
 
-    const summary = this.calculateSummary(orders);
-    const dailySales = this.calculateDailySales(orders, start, end);
-    const topProducts = this.calculateTopProducts(orders);
-    const priceRangeRevenue = this.calculatePriceRangeRevenue(orders);
+    // This year
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    const prevYearStart = new Date(now.getFullYear() - 1, 0, 1);
+    const prevYearEnd = new Date(
+      now.getFullYear() - 1,
+      11,
+      31,
+      23,
+      59,
+      59,
+      999
+    );
+
+    const [
+      todayOrders,
+      yesterdayOrders,
+      weekOrders,
+      prevWeekOrders,
+      monthOrders,
+      prevMonthOrders,
+      yearOrders,
+      prevYearOrders,
+    ] = await Promise.all([
+      dashboardRepository.findCompletedOrders(store.id, todayStart, todayEnd),
+      dashboardRepository.findCompletedOrders(
+        store.id,
+        yesterdayStart,
+        yesterdayEnd
+      ),
+      dashboardRepository.findCompletedOrders(store.id, weekStart, weekEnd),
+      dashboardRepository.findCompletedOrders(
+        store.id,
+        prevWeekStart,
+        prevWeekEnd
+      ),
+      dashboardRepository.findCompletedOrders(store.id, monthStart, monthEnd),
+      dashboardRepository.findCompletedOrders(
+        store.id,
+        prevMonthStart,
+        prevMonthEnd
+      ),
+      dashboardRepository.findCompletedOrders(store.id, yearStart, yearEnd),
+      dashboardRepository.findCompletedOrders(
+        store.id,
+        prevYearStart,
+        prevYearEnd
+      ),
+    ]);
 
     return {
-      summary,
-      dailySales,
-      topProducts,
-      priceRangeRevenue,
-      dateRange: { startDate, endDate },
+      today: this.buildPeriodData(todayOrders, yesterdayOrders),
+      week: this.buildPeriodData(weekOrders, prevWeekOrders),
+      month: this.buildPeriodData(monthOrders, prevMonthOrders),
+      year: this.buildPeriodData(yearOrders, prevYearOrders),
+      topSales: this.calculateTopSales(yearOrders),
+      priceRange: this.calculatePriceRange(yearOrders),
     };
   }
 
-  //판매 요약(총 주문 수, 총 매출, 총 판매 수량, 평균 주문 금액)
-
-  private calculateSummary(orders: any[]): SalesSummary {
-    let totalRevenue = 0;
-    let totalItemsSold = 0;
-
+  private calcStats(orders: any[]): PeriodStats {
+    let totalSales = 0;
     for (const order of orders) {
       for (const item of order.items) {
-        totalRevenue += item.price * item.quantity;
-        totalItemsSold += item.quantity;
+        totalSales += item.price * item.quantity;
       }
     }
+    return { totalOrders: orders.length, totalSales };
+  }
+
+  private calcChangeRate(
+    current: PeriodStats,
+    previous: PeriodStats
+  ): PeriodStats {
+    const ordersChange =
+      previous.totalOrders > 0
+        ? Math.round(
+            ((current.totalOrders - previous.totalOrders) /
+              previous.totalOrders) *
+              100
+          )
+        : current.totalOrders > 0
+          ? 100
+          : 0;
+
+    const salesChange =
+      previous.totalSales > 0
+        ? Math.round(
+            ((current.totalSales - previous.totalSales) /
+              previous.totalSales) *
+              100
+          )
+        : current.totalSales > 0
+          ? 100
+          : 0;
+
+    return { totalOrders: ordersChange, totalSales: salesChange };
+  }
+
+  private buildPeriodData(
+    currentOrders: any[],
+    previousOrders: any[]
+  ): PeriodData {
+    const current = this.calcStats(currentOrders);
+    const previous = this.calcStats(previousOrders);
+    const changeRate = this.calcChangeRate(current, previous);
 
     return {
-      totalOrders: orders.length,
-      totalRevenue,
-      totalItemsSold,
-      averageOrderValue:
-        orders.length > 0 ? Math.floor(totalRevenue / orders.length) : 0,
+      current,
+      previous,
+      changeRate,
     };
   }
 
-  //일별 판매 (기간 내 매일의 주문 수 + 매출)
-  private calculateDailySales(
-    orders: any[],
-    startDate: Date,
-    endDate: Date
-  ): DailySales[] {
-    //날짜 별 Map 초기화 (빈 날짜도 0으로!)
-    const dailyMap = new Map<string, { orders: number; revenue: number }>();
-
-    const current = new Date(startDate);
-    while (current <= endDate) {
-      const dateStr = current.toISOString().split('T')[0]; // "2026-04-01"
-      dailyMap.set(dateStr, { orders: 0, revenue: 0 });
-      current.setDate(current.getDate() + 1); // 다음날로
-    }
-
-    //주문 데이터 집계
-    for (const order of orders) {
-      const dateStr = order.createdAt.toISOString().split('T')[0];
-      const daily = dailyMap.get(dateStr);
-
-      if (daily) {
-        daily.orders += 1;
-        for (const item of order.items) {
-          daily.revenue += item.price * item.quantity;
-        }
-      }
-    }
-
-    // Map -> 배열 변환
-    const result: DailySales[] = [];
-    for (const [date, data] of dailyMap) {
-      result.push({ date, ...data });
-    }
-
-    return result;
-  }
-
-  //많이 판매된 상품 TOP5
-  private calculateTopProducts(orders: any[]): TopProduct[] {
+  private calculateTopSales(orders: any[]): TopSalesProduct[] {
     const productMap = new Map<
       string,
-      {
-        productId: string;
-        productName: string;
-        productImage: string | null;
-        totalQuantity: number;
-        totalRevenue: number;
-      }
+      { totalOrders: number; product: { id: string; name: string; price: number } }
     >();
 
     for (const order of orders) {
@@ -154,37 +200,29 @@ export class DashboardService {
         const existing = productMap.get(key);
 
         if (existing) {
-          existing.totalQuantity += item.quantity;
-          existing.totalRevenue += item.quantity * item.price;
+          existing.totalOrders += item.quantity;
         } else {
           productMap.set(key, {
-            productId: item.product.id,
-            productName: item.product.name,
-            productImage: item.product.image,
-            totalQuantity: item.quantity,
-            totalRevenue: item.price * item.quantity,
+            totalOrders: item.quantity,
+            product: {
+              id: item.product.id,
+              name: item.product.name,
+              price: item.product.price,
+            },
           });
         }
       }
     }
-    //수량 많은 순 정렬 -> 상위 5개
-    const sorted = Array.from(productMap.values())
-      .sort((a, b) => b.totalQuantity - a.totalQuantity) // 수량 많은순
-      .slice(0, 5); // 상위 5개
 
-    return sorted.map((product, index) => ({
-      rank: index + 1,
-      ...product,
-    }));
+    return Array.from(productMap.values())
+      .sort((a, b) => b.totalOrders - a.totalOrders)
+      .slice(0, 5);
   }
 
-  //가격대별 매충 비중
-  private calculatePriceRangeRevenue(orders: any[]): PriceRangeRevenue[] {
-    //가격대 별 초기화
+  private calculatePriceRange(orders: any[]): PriceRangeData[] {
     const rangeData = PRICE_RANGES.map((range) => ({
       ...range,
-      orderCount: 0,
-      revenue: 0,
+      totalSales: 0,
     }));
 
     let grandTotal = 0;
@@ -196,27 +234,21 @@ export class DashboardService {
 
         grandTotal += itemRevenue;
 
-        //어떤 가격대에 속하는지 찾기
         for (const rangeItem of rangeData) {
           if (unitPrice >= rangeItem.min && unitPrice < rangeItem.max) {
-            rangeItem.orderCount += 1;
-            rangeItem.revenue += itemRevenue;
+            rangeItem.totalSales += itemRevenue;
             break;
           }
         }
       }
     }
 
-    //비중(%) 계산
     return rangeData.map((item) => ({
-      range: item.range,
-      minPrice: item.min,
-      maxPrice: item.max === Infinity ? -1 : item.max,
-      orderCount: item.orderCount,
-      revenue: item.revenue,
+      priceRange: item.range,
+      totalSales: item.totalSales,
       percentage:
         grandTotal > 0
-          ? Math.round((item.revenue / grandTotal) * 1000) / 10
+          ? Math.round((item.totalSales / grandTotal) * 1000) / 10
           : 0,
     }));
   }
