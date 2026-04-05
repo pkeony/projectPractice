@@ -1,4 +1,3 @@
-cat > http/dashboard.http << 'EOF'
 @baseUrl = http://localhost:3001
 
 ### 🔑 SELLER 로그인
@@ -22,7 +21,7 @@ Content-Type: application/json
 }
 
 ###
-@sellerToken = {{loginSeller1.response.body.accessToken}}
+@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW5qd290Mm4wMDA1YjBldmpwa2FhYXk0IiwiZW1haWwiOiJzZWxsZXIxQHRlc3QuY29tIiwidHlwZSI6IlNFTExFUiIsImlhdCI6MTc3NTM4MzE4NCwiZXhwIjoxNzc1Mzg2Nzg0fQ.o8kjhL-XGgFCZL_j7_jkurPnOBpZpTRBzx45guzGaQk
 @buyerToken = {{loginBuyer1.response.body.accessToken}}
 
 ### ============================================
@@ -66,4 +65,3 @@ Authorization: Bearer {{sellerToken}}
 # @name dashboardBadRange
 GET {{baseUrl}}/dashboard?startDate=2026-04-30&endDate=2026-04-01
 Authorization: Bearer {{sellerToken}}
-EOF

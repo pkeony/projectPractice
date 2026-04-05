@@ -30,19 +30,19 @@ app.use(express.json());
 
 app.use(cookieParser());
 
-app.use('/auth', authRouter);
-app.use('/users', userRouter);
-app.use('/stores', storeRouter);
-app.use('/products', productRouter);
-app.use('/product', reviewRouter);
-app.use('/review', reviewRouter);
-app.use('/cart', cartRouter);
-app.use('/orders', orderRouter);
-app.use('/inquiries', inquiryRouter);
-app.use('/notifications', notificationRouter);
-app.use('/dashboard', dashboardRouter);
-app.use('/metadata', metadataRouter);
-app.use('/s3', s3Router);
+app.use('/api/auth', authRouter);
+app.use('/api/users', userRouter);
+app.use('/api/stores', storeRouter);
+app.use('/api/products', productRouter);
+app.use('/api/product', reviewRouter);
+app.use('/api/review', reviewRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/orders', orderRouter);
+app.use('/api/inquiries', inquiryRouter);
+app.use('/api/notifications', notificationRouter);
+app.use('/api/dashboard', dashboardRouter);
+app.use('/api/metadata', metadataRouter);
+app.use('/api/s3', s3Router);
 
 app.use(errorHandler);
 
