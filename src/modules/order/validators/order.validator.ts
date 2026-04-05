@@ -1,7 +1,9 @@
 import { AppError } from '../../../common/types/errors';
 
 export const validateCreateOrder = (body: any): void => {
-  const { name, phoneNumber, address, usePoint, items } = body;
+  const { name, phoneNumber, address, usePoint } = body;
+  // ✅ orderItems 또는 items 둘 다 허용
+  const items = body.orderItems || body.items;
 
   if (!name || !phoneNumber || !address) {
     throw new AppError(
@@ -11,7 +13,10 @@ export const validateCreateOrder = (body: any): void => {
     );
   }
 
-  if (usePoint === undefined || typeof usePoint !== 'number' || usePoint < 0) {
+  if (
+    usePoint !== undefined &&
+    (typeof usePoint !== 'number' || usePoint < 0)
+  ) {
     throw new AppError(
       400,
       '포인트는 0 이상의 숫자여야 합니다.',

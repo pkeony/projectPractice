@@ -54,8 +54,10 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
     mutationFn: (body: CartEdit) => patchCart(body),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
+      // ✅ 현재 상품의 아이템만 필터링!
+      const currentProductItems = response.filter((item) => item.productId === productId);
       setSelectedItems(
-        response.map((item) => {
+        currentProductItems.map((item) => {
           return { ...item, product: data as ProductInfoData };
         })
       );
@@ -124,20 +126,29 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
       toaster("warn", "옵션을 선택해 주세요.");
       return;
     }
-    // 로그인 확인
     if (!user) {
       toaster("warn", "로그인이 필요합니다.");
       return;
     }
-    // 셀러일 경우 바이어 로그인 요청
     if (user.type === "SELLER") {
       toaster("warn", "바이어로 로그인해 주세요.");
       return;
     }
 
-    await postCart(); // 카트 생성
-    editCart({ productId, sizes: options });
+    await postCart();
 
+    // ✅ editCart 안 쓰고 직접 selectedItems 세팅 후 이동!
+    const orderItems = options.map((option) => ({
+      id: `temp-${option.sizeId}`,
+      cartId: "",
+      productId,
+      sizeId: option.sizeId,
+      quantity: option.quantity,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      product: data as ProductInfoData,
+    }));
+    setSelectedItems(orderItems);
     router.push("/buyer/order");
   };
 
@@ -182,7 +193,9 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
           <div className="text-gray01 text-lg">
             <div className="flex">
               <p>판매가</p>
-              <p className="text-black01 ml-22.5 font-extrabold">{Math.floor(data.price * (1 - data.discountRate / 100)).toLocaleString()}원</p>
+              <p className="text-black01 ml-22.5 font-extrabold">
+                {Math.floor(data.price * (1 - data.discountRate / 100)).toLocaleString()}원
+              </p>
               {data.discountRate !== 0 && (
                 <p className="ml-2 font-bold line-through">{data.price.toLocaleString()}원</p>
               )}

@@ -64,10 +64,7 @@ export class OrderService {
     return orders.map(transformOrder);
   }
 
-  async getOrderById(
-    userId: string,
-    orderId: string
-  ): Promise<any> {
+  async getOrderById(userId: string, orderId: string): Promise<any> {
     const order = await orderRepository.findById(orderId);
 
     if (!order) {
@@ -113,6 +110,7 @@ export class OrderService {
     }[] = [];
 
     for (const item of createOrderDto.items) {
+      const sizeId = Number(item.sizeId);
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
       });
@@ -137,7 +135,7 @@ export class OrderService {
         where: {
           productId_sizeId: {
             productId: item.productId,
-            sizeId: item.sizeId,
+            sizeId,
           },
         },
       });
@@ -159,7 +157,7 @@ export class OrderService {
 
       orderItems.push({
         productId: item.productId,
-        sizeId: item.sizeId,
+        sizeId,
         quantity: item.quantity,
         price: discountedPrice,
       });
